@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "aegisops-backend"
+version = "0.1.0"
+description = "AegisOps Backend Service"
+authors = ["AegisOps Team"]
+packages = [{ include = "app" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.104.0"
+uvicorn = { version = "^0.27.0", extras = ["standard"] }
+sqlalchemy = { version = "^2.0.23", extras = ["asyncio"] }
+alembic = "^1.13.1"
+pydantic = { version = "^2.5.0", extras = ["email"] }
+pydantic-settings = "^2.0.0"
+structlog = "^24.1.0"
+python-jose = { version = "^3.3.0", extras = ["cryptography"] }
+passlib = { version = "^1.7.4", extras = ["bcrypt"] }
+celery = { version = "^5.3.6", extras = ["redis"] }
+redis = "^5.0.1"
+kafka-python = "^2.0.2"
+httpx = { version = "^0.25.0", extras = ["http2"] }
+pytest = { version = "^8.0.0", optional = true }
+pytest-asyncio = { version = "^0.23.0", optional = true }
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4.2"
+mypy = "^1.8.0"
+types-passlib = "^1.0.4"
+types-python-jose = { version = "^3.3.0", optional = true }
+types-redis = "^4.5.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
