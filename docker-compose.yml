@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aegisops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aegisops
+      POSTGRES_PASSWORD: aegisops
+      POSTGRES_DB: aegisops
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegisops -d aegisops"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

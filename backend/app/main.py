@@ -1,8 +1,12 @@
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 from .core.config import settings
+from .core.database import check_database_connection, dispose_engine
 from .core.logging import configure_logging
 from .core.middleware import CorrelationIDMiddleware, SecurityHeadersMiddleware
 from .api import api_router
@@ -11,6 +15,13 @@ from .api import api_router
 configure_logging()
 logger = structlog.get_logger()
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    yield
+    await dispose_engine()
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.PROJECT_NAME,
@@ -18,6 +29,7 @@ def create_app() -> FastAPI:
         openapi_url=f"{settings.API_V1_STR}/openapi.json",
         docs_url="/docs",
         redoc_url=None,
+        lifespan=lifespan,
     )
 
     # Middleware
@@ -41,7 +53,8 @@ def create_app() -> FastAPI:
 
     @app.get("/ready", tags=["health"])
     async def readiness_check():
-        # Database connectivity is added with migrations in Phase 0 Step 3.
+        if not await check_database_connection():
+            return JSONResponse(status_code=503, content={"status": "not_ready"})
         return {"status": "ready"}
 
     # Global exception handler

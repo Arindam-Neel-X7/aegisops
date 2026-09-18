@@ -186,6 +186,12 @@ cd backend
 poetry run alembic upgrade head
 ```
 
+The initial migration enables PostgreSQL's `pgcrypto` extension and creates the
+global `plans` table plus the tenant, user, membership, and session foundation
+tables. It also creates the required indexes, timestamp triggers, and row-level
+security policies. The three plan records are seeded because a tenant requires
+a valid `plan_id` from its first insert.
+
 ### 5. Start Development Servers
 
 ```bash
@@ -215,8 +221,26 @@ poetry run pytest tests -q
 
 These tests cover the health and readiness response contracts, correlation ID
 propagation, security headers, and the OpenAPI document. The readiness endpoint
-does not check PostgreSQL until Phase 0 Step 3 adds the database and migration
-foundation.
+checks PostgreSQL connectivity and returns `503 {"status":"not_ready"}` until
+the database is reachable.
+
+### Database Verification
+
+Once PostgreSQL is running with the connection details in `.env`, run:
+
+```bash
+cd backend
+poetry run alembic upgrade head
+poetry run alembic current
+poetry run pytest tests -q
+```
+
+To validate the migration rollback in a disposable local database:
+
+```bash
+poetry run alembic downgrade base
+poetry run alembic upgrade head
+```
 
 ---
 

@@ -2,7 +2,8 @@
 
 **Last updated:** 2026-09-18
 **Current phase:** 0 - Foundation
-**Verified position:** Step 2 stabilized and verified; Step 3 pending
+**Current step:** 3 - PostgreSQL and Alembic foundation ✅
+**Status:** Complete — all live PostgreSQL verifications passed
 
 ## Verified completed work
 
@@ -14,38 +15,79 @@ editor configuration, and GitHub remote are present.
 
 ### Step 2 - Backend skeleton and health endpoints
 
-The FastAPI application factory is operational. It provides:
+The FastAPI application factory is operational with correlation IDs, structured
+logging, CORS configuration, security response headers, health endpoints, and
+OpenAPI documentation. Its test suite covers these contracts.
 
-- `GET /health`, returning the application status and version.
-- `GET /ready`, returning the current process readiness status.
-- OpenAPI at `/api/v1/openapi.json` and interactive documentation at `/docs`.
-- Correlation ID propagation, structured logging, CORS configuration, and
-  baseline security response headers.
+### Step 3 - Database and migration foundation ✅
 
-The backend configuration is documented in `.env.example`. The database engine
-is deliberately initialized lazily because PostgreSQL support belongs to Step 3.
+The backend now contains:
 
-## Verification performed
+- Async PostgreSQL connectivity through SQLAlchemy and `asyncpg`, including
+  connection pooling and disposal during application shutdown.
+- A database-backed `/ready` endpoint. It returns `200 {"status":"ready"}`
+  only after `SELECT 1` succeeds; otherwise it returns `503`.
+- SQLAlchemy models for the schema's global `plans` dependency and the planned
+  tenant, user, tenant-membership, and session foundations.
+- Shared UUID, UTC timestamp, and soft-delete columns on all foundation models.
+- An asynchronous Alembic environment and a reversible first migration,
+  `20260918_0001`.
+- PostgreSQL `pgcrypto` UUID defaults, required indexes, risk and role check
+  constraints, `updated_at` triggers, plan seed data, and RLS policies.
+- A `docker-compose.yml` with PostgreSQL 16 Alpine, health checks, and a
+  named volume for development data persistence.
 
-- Python compilation of `backend/app` passes.
-- Three focused tests pass for health, readiness, correlation ID propagation,
-  security headers, and OpenAPI availability.
-- The test dependencies are declared in Poetry's development dependency group.
+`plans` is intentionally included in the first migration because `tenants` has
+a required foreign key to `plans.id`; omitting it would make the schema invalid.
 
-## Current limitations
+## Live PostgreSQL verification performed
 
-- `GET /ready` does not yet test database connectivity. That contract will be
-  implemented with the PostgreSQL and Alembic work in Step 3.
-- Docker Desktop/Compose is not available on the current development machine,
-  so the Docker profile and database-backed migration workflow are not yet
-  verified.
-- No Alembic environment, ORM models, migrations, frontend implementation, CI
-  workflow, or bootstrap automation has been added yet.
+All verifications were executed against a disposable `postgres:16-alpine`
+Docker container on 2026-09-18.
 
-## Immediate next planned task
+### alembic upgrade head
+- Migration `20260918_0001` applied cleanly with no errors.
 
-**Phase 0 Step 3 - PostgreSQL and Alembic foundation.** This will add the
-async PostgreSQL driver, database model base and the tenant, user, membership,
-and session models; initialize Alembic; create and test the first reversible
-migration; and make `/ready` perform a real connectivity check. It requires a
-working Docker Compose environment (or an equivalent PostgreSQL instance).
+### Foundation tables (5 of 5 present)
+- `plans`, `users`, `tenants`, `tenant_memberships`, `sessions`
+- All tables have the `id`, `created_at`, `updated_at`, `is_deleted` columns.
+
+### Seed data
+- 3 plan rows inserted: Free Trial ($0), Professional ($49), Enterprise ($199).
+- Deterministic UUIDs (`00000000-0000-0000-0000-00000000000{1,2,3}`).
+
+### Indexes (17 total)
+- Primary keys, unique constraints, and query-performance indexes all present.
+
+### Check constraints
+- `ck_membership_role` restricts role to `admin`, `sre`, `viewer`.
+- `ck_membership_max_risk_tolerance` restricts risk tolerance to 0–100.
+
+### updated_at triggers (5 of 5)
+- `trg_{table}_updated_at` BEFORE UPDATE triggers on all foundation tables.
+
+### RLS policies (5 of 5)
+- `plans` and `users`: `USING (true)` — globally readable.
+- `tenants`: tenant isolation via `id = current_setting('app.current_tenant_id')`.
+- `tenant_memberships` and `sessions`: tenant isolation via `tenant_id`.
+
+### pgcrypto extension
+- Confirmed present and providing `gen_random_uuid()` for UUID defaults.
+
+### /ready endpoint
+- FastAPI app started successfully with `uvicorn`.
+- `GET /ready` returned `200 {"status": "ready"}` with live database.
+- `GET /health` returned `200 {"status": "ok", "version": "0.1.0"}`.
+
+### Downgrade/upgrade round trip
+- `alembic downgrade base` dropped all 5 tables, the trigger function, and
+  left only `alembic_version`.
+- `alembic upgrade head` recreated all tables, seed data, indexes, constraints,
+  triggers, RLS policies, and the pgcrypto extension identically.
+
+### Test suite
+- All 8 backend tests pass (API contracts, DB failure, model metadata, migration head).
+
+## Immediate next action
+
+Step 4 (frontend foundation) is ready to begin.
