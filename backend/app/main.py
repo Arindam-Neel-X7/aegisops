@@ -25,7 +25,7 @@ def create_app() -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Configure restrictively in production
+        allow_origins=settings.BACKEND_CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -41,8 +41,7 @@ def create_app() -> FastAPI:
 
     @app.get("/ready", tags=["health"])
     async def readiness_check():
-        # In a real implementation, this would check DB connectivity
-        # For Phase 0 skeleton, we return ok immediately
+        # Database connectivity is added with migrations in Phase 0 Step 3.
         return {"status": "ready"}
 
     # Global exception handler

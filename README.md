@@ -204,6 +204,20 @@ npm run dev
 - Backend docs: http://localhost:8000/docs
 - Frontend: http://localhost:3000
 
+### Current Foundation Verification
+
+Phase 0 Step 2 is verified locally with the following backend checks:
+
+```bash
+cd backend
+poetry run pytest tests -q
+```
+
+These tests cover the health and readiness response contracts, correlation ID
+propagation, security headers, and the OpenAPI document. The readiness endpoint
+does not check PostgreSQL until Phase 0 Step 3 adds the database and migration
+foundation.
+
 ---
 
 ## Docker Compose Profiles
@@ -232,6 +246,10 @@ docker compose --profile full up -d
 # Stop all
 docker compose down
 ```
+
+Docker Desktop with Compose v2 is required before running the database-backed
+Phase 0 Step 3 workflow. Copy `.env.example` to `.env` and replace the
+development values before using any shared or deployed environment.
 
 ---
 

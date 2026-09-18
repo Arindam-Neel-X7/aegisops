@@ -1,7 +1,6 @@
 import structlog
 import logging
 import sys
-from typing import Any, Dict
 
 def configure_logging() -> None:
     """Configure structlog for JSON output with correlation ID support."""

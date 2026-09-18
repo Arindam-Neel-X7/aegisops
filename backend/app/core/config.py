@@ -1,22 +1,36 @@
-from pydantic_settings import BaseSettings
-from pydantic import PostgresDsn, field_validator
-from typing import List, Optional
-import secrets
+from pathlib import Path
+from typing import Optional
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 class Settings(BaseSettings):
+    """Runtime configuration loaded from the repository-level ``.env`` file."""
+
+    model_config = SettingsConfigDict(
+        case_sensitive=True,
+        env_file=REPOSITORY_ROOT / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     # Project
     PROJECT_NAME: str = "AegisOps"
     API_V1_STR: str = "/api/v1"
     VERSION: str = "0.1.0"
 
     # Security
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    # This is deliberately conspicuous. A deployment must supply a real value.
+    SECRET_KEY: str = "change-this-development-secret-before-deployment"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     ALGORITHM: str = "HS256"
 
     # Database
-    DATABASE_URL: PostgresDsn
-    DATABASE_TEST_URL: Optional[PostgresDsn] = None
+    # Local default; shared and deployed environments must override this value.
+    DATABASE_URL: str = "postgresql+asyncpg://aegisops:aegisops@localhost:5432/aegisops"
+    DATABASE_TEST_URL: Optional[str] = None
 
     # Redis
     REDIS_HOST: str = "localhost"
@@ -25,7 +39,7 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
 
     # CORS
-    BACKEND_CORS_ORIGINS: List[str] = ["*"]
+    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
     # Celery
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
@@ -33,18 +47,5 @@ class Settings(BaseSettings):
 
     # Kafka
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
-
-    @field_validator("DATABASE_URL")
-    @classmethod
-    def assemble_db_connection(cls, v: Optional[str], info) -> str:
-        if isinstance(v, str):
-            return v
-        # For SQLite fallback in development (if needed)
-        return "sqlite:///./test.db"
-
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 settings = Settings()

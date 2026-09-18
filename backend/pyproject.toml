@@ -20,12 +20,12 @@ celery = { version = "^5.3.6", extras = ["redis"] }
 redis = "^5.0.1"
 kafka-python = "^2.0.2"
 httpx = { version = "^0.25.0", extras = ["http2"] }
-pytest = { version = "^8.0.0", optional = true }
-pytest-asyncio = { version = "^0.23.0", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.2"
 mypy = "^1.8.0"
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23.0"
 types-passlib = "^1.0.4"
 types-python-jose = { version = "^3.3.0", optional = true }
 types-redis = "^4.5.5"
