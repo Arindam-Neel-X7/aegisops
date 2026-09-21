@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ThemeProvider } from "../providers/theme-provider";
+import { QueryProvider } from "../providers/query-provider";
 
 /**
  * Minimal structural boundary for provider composition.
@@ -9,8 +10,10 @@ import { ThemeProvider } from "../providers/theme-provider";
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
-      {children}
-    </ThemeProvider>
+    <QueryProvider>
+      <ThemeProvider>
+        {children}
+      </ThemeProvider>
+    </QueryProvider>
   );
 }

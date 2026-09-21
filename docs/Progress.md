@@ -2,8 +2,8 @@
 
 **Last updated:** 2026-09-22
 **Current phase:** 0 - Foundation
-**Current step:** 5 - Design Tokens, Theming & Accessibility
-**Status:** Complete — ready for Step 6
+**Current step:** 6.6 - Step 6 Integration & Isolation Audit ✅
+**Status:** Complete — Step 6 frontend state-management, API/realtime transport, provider composition, and integration/isolation verification passed cleanly.
 
 ## Verified completed work
 
@@ -463,3 +463,293 @@ Verification:
 - `npm run build` — PASS
 
 No Step 5 implementation files were modified.
+
+## Step 6 - Frontend State Management & Runtime Infrastructure
+
+### Step 6 Overview
+
+Step 6 established and validated the frontend runtime state-management and transport foundation required before application feature implementation.
+The implementation was executed as six isolated tasks:
+- Step 6.1 — Zustand Global UI State Foundation
+- Step 6.2 — TanStack Query Server-State Foundation
+- Step 6.3 — Frontend API/Query Contract Foundation
+- Step 6.4 — Socket.IO Realtime Transport Foundation
+- Step 6.5 — Provider & Runtime State Composition
+- Step 6.6 — Step 6 Integration & Isolation Audit
+
+The work remained strictly within frontend infrastructure scope. No application feature UI, feature API endpoints, authentication flows, AI/RCA functionality, remediation functionality, or other later-phase product behavior was introduced.
+
+### Step 6.1 — Zustand Global UI State Foundation
+
+Status: COMPLETE
+Implemented the global client/UI state foundation using Zustand.
+Primary file:
+- frontend/stores/ui-store.ts
+
+The store provides the minimal generic UI state required by the current foundation:
+- isSidebarOpen
+- typed setter action
+- typed toggle action
+
+Architectural constraints verified:
+- Zustand is reserved for global client/UI state.
+- No server/backend data is stored in Zustand.
+- No API response cache is duplicated into Zustand.
+- Theme preference remains owned by ThemeProvider.
+- No feature-specific Zustand stores were introduced.
+- No persistence middleware was introduced.
+- Store initialization does not depend on browser APIs.
+- The store remains independently consumable by future client components without a React provider.
+
+Verification passed:
+- npm run type-check — PASS
+- npm run lint — PASS
+- npm run build — PASS
+
+### Step 6.2 — TanStack Query Server-State Foundation
+
+Status: COMPLETE
+Implemented the TanStack Query runtime provider.
+Primary files:
+- frontend/providers/query-provider.tsx
+- frontend/app/providers.tsx
+
+The QueryClient is created within the provider component lifecycle using useState, rather than at module scope, preserving an appropriate client/SSR boundary.
+
+Architectural constraints verified:
+- TanStack Query owns server/backend state.
+- No feature-specific query hooks were introduced.
+- No feature query keys were introduced.
+- No backend requests were introduced.
+- No fake server data was introduced.
+- No Socket.IO-to-Query integration was introduced.
+- No Zustand-to-Query duplication was introduced.
+
+Verification passed:
+- npm run type-check — PASS
+- npm run lint — PASS
+- npm run build — PASS
+
+### Step 6.3 — Frontend API/Query Contract Foundation
+
+Status: COMPLETE
+Implemented the generic REST API transport and error-normalization boundary.
+Primary files:
+- frontend/lib/api/client.ts
+- frontend/lib/api/errors.ts
+
+The API layer provides:
+- generic typed request handling
+- JSON request/response handling
+- NEXT_PUBLIC_API_URL based REST configuration
+- safe URL normalization
+- typed ApiError handling
+- HTTP status/error normalization
+- safe runtime error-payload parsing
+- 204/no-content handling
+
+During review, a strictness issue in body handling and URL/error parsing was identified and corrected within the isolated task. The resulting implementation uses explicit undefined checks, robust URL normalization, and safe runtime property validation.
+
+Architectural constraints verified:
+- The API layer is transport/contract infrastructure only.
+- No feature endpoints were introduced.
+- No feature query hooks were introduced.
+- No authentication implementation was introduced.
+- No secrets or private credentials were embedded in client code.
+- API transport does not own application state.
+
+Verification passed:
+- npm run type-check — PASS
+- npm run lint — PASS
+- npm run build — PASS
+
+### Step 6.4 — Socket.IO Realtime Transport Foundation
+
+Status: COMPLETE — APPROVED AFTER MINIMAL FIX
+Implemented the standalone Socket.IO transport boundary.
+Primary file:
+- frontend/lib/realtime/socket.ts
+
+The realtime foundation provides:
+- lazy socket creation
+- singleton socket lifecycle
+- autoConnect: false
+- explicit connect lifecycle
+- explicit disconnect lifecycle
+- SSR protection
+- generic subscribe/unsubscribe helpers
+- generic emit support
+- duplicate-instance prevention
+- listener cleanup
+
+A configuration defect was identified during review: using NEXT_PUBLIC_API_URL as a Socket.IO fallback could incorrectly treat REST path segments as Socket.IO namespace/path semantics. The fallback was removed.
+
+The accepted separation is now:
+REST:
+NEXT_PUBLIC_API_URL → API client
+Realtime:
+NEXT_PUBLIC_SOCKET_URL → Socket.IO
+
+Socket.IO remains transport only. It does not own Zustand state, TanStack Query state, feature events, or business payload schemas.
+
+Verification passed:
+- npm run type-check — PASS
+- npm run lint — PASS
+- npm run build — PASS
+
+### Step 6.5 — Provider & Runtime State Composition
+
+Status: COMPLETE
+No implementation change was required because the runtime provider composition was already correctly established during Step 6.2 and remained valid after the later foundation work.
+
+Accepted runtime hierarchy:
+RootLayout (Server Component)
+→ Providers (Client Boundary)
+→ QueryProvider
+→ ThemeProvider
+→ application children
+
+Verified:
+- ThemeProvider remains the owner of theme preference/resolved-theme state.
+- TanStack Query remains the server-state owner.
+- Zustand remains a standalone global client/UI store and does not require a provider.
+- Socket.IO remains a standalone lazy transport boundary and does not require a provider at this stage.
+- No automatic global Socket.IO connection was introduced.
+- Root layout.tsx remains server-safe.
+- Browser-only APIs remain inside appropriate client/runtime boundaries.
+
+No unrelated files were modified during Step 6.5.
+
+### Step 6.6 — Step 6 Integration & Isolation Audit
+
+Status: COMPLETE — READY FOR REVIEW
+Step 6.6 was executed as an audit-only task. No new functionality was introduced and no source files were modified.
+
+The final audit inspected:
+- frontend/stores/ui-store.ts
+- frontend/providers/query-provider.tsx
+- frontend/lib/api/client.ts
+- frontend/lib/api/errors.ts
+- frontend/lib/realtime/socket.ts
+- frontend/app/providers.tsx
+- frontend/app/layout.tsx
+- frontend/providers/theme-provider.tsx
+- frontend/package.json
+
+The audit confirmed:
+- Zustand remains limited to global client/UI state.
+- TanStack Query remains limited to server/backend state.
+- React state remains the owner for component-local transient state.
+- Socket.IO remains realtime transport only.
+- ThemeProvider remains the owner of theme preference/resolved-theme state.
+- No duplicated state ownership was found.
+- No unnecessary Zustand Provider was introduced.
+- No unnecessary SocketProvider was introduced.
+- No automatic realtime connection was introduced.
+- REST and realtime configuration remain independent.
+- SSR and hydration boundaries remain safe.
+- No secrets, private tokens, credentials, or mock API keys were exposed.
+- No feature functionality leaked into the foundation.
+- Step 5 remained intact.
+
+### Step 6 State Ownership Matrix
+
+| Concern | Owner |
+|---------|-------|
+| Theme preference | ThemeProvider |
+| Resolved theme | ThemeProvider |
+| Global UI state | Zustand |
+| Server/backend state | TanStack Query |
+| Component-local transient state | React state |
+| REST transport | API client |
+| REST error normalization | ApiError/API layer |
+| Realtime transport | Socket.IO |
+| Realtime state | Future appropriate state owner |
+| Feature business state | NOT IMPLEMENTED |
+
+This ownership model is the locked architectural boundary for subsequent frontend implementation.
+
+### Step 6 Scope Isolation
+
+The following remained intentionally outside Step 6:
+- AppShell
+- sidebar UI
+- header
+- command palette
+- dashboard / Command Center
+- Incident List
+- Incident Detail
+- RCA UI
+- topology UI
+- telemetry UI
+- charts
+- remediation UI
+- HITL UI
+- notification UI
+- authentication
+- login / registration
+- onboarding
+- feature API endpoints
+- feature query hooks and mutations
+- feature realtime events
+- AI agent implementation
+- RAG
+- anomaly detection
+- incident correlation
+- remediation execution
+
+No later-phase product behavior was found during the final audit.
+
+### Step 6 Verification Gates
+
+The final Step 6 verification gates passed:
+- npm run type-check — PASS
+- npm run lint — PASS
+- npm run build — PASS
+
+The final audit also confirmed:
+- Step 5 integrity — PASS
+- Step 6.1 integrity — PASS
+- Step 6.2 integrity — PASS
+- Step 6.3 integrity — PASS
+- Step 6.4 integrity — PASS
+- Step 6.5 integrity — PASS
+- Cross-system state duplication audit — PASS
+- SSR/hydration audit — PASS
+- Security boundary audit — PASS
+- Performance foundation audit — PASS
+- Scope-leak audit — PASS
+- Dependency audit — PASS
+
+### Step 6 Final Architecture
+
+The completed frontend foundation now follows:
+Semantic Tokens
+→ ThemeProvider
+→ Zustand Global UI State
+→ TanStack Query Server State
+→ Generic REST API Boundary
+→ Socket.IO Realtime Transport
+→ Provider Composition
+→ Feature Implementation
+
+The final state-management rule remains:
+TanStack Query = server/backend state
+Zustand = global client/UI state
+React state = component-local transient state
+Socket.IO = realtime transport only
+ThemeProvider = theme preference/resolved-theme state
+
+### Step 6 Final Status
+
+COMPLETE — APPROVED AND CLOSED
+Step 6 is formally closed after successful completion of Steps 6.1 through 6.6 and the final integration/isolation audit.
+No additional Step 6 functionality should be added. Subsequent work should begin from the next task defined in the accepted Implementation Plan.
+
+### Last Executed Step
+
+Step 6.6 — Step 6 Integration & Isolation Audit
+
+### Step 6 Completion Date
+
+2026-09-22
