@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    /* ── Language & Emit ─────────────────────────────── */
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "jsx": "preserve",
+    "noEmit": true,
+    "incremental": true,
+
+    /* ── Modules ─────────────────────────────────────── */
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+
+    /* ── Strictness ──────────────────────────────────── */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* ── Third-party declarations ────────────────────── */
+    // Required: create-next-app default. Prevents false errors from
+    // conflicting .d.ts files across @types/* and Radix UI packages.
+    "skipLibCheck": true,
+
+    /* ── Next.js Plugin ──────────────────────────────── */
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+
+    /* ── Path Aliases ────────────────────────────────── */
+    // "@/*" maps to the frontend root (e.g. "@/lib/utils" → "./lib/utils")
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", ".next"]
+}
