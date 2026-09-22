@@ -1,9 +1,9 @@
 # AegisOps Implementation Progress
 
 **Last updated:** 2026-09-22
-**Current phase:** 0 - Foundation
-**Current step:** 6.6 - Step 6 Integration & Isolation Audit ✅
-**Status:** Complete — Step 6 frontend state-management, API/realtime transport, provider composition, and integration/isolation verification passed cleanly.
+**Current phase:** 0 - Foundation — Group D: Infrastructure & Docker Profile
+**Current step:** 7.8 - Full Compose Integration & Health Audit ✅
+**Status:** Group D complete — full Compose runtime integration passed with two documented runtime corrections.
 
 ## Verified completed work
 
@@ -753,3 +753,98 @@ Step 6.6 — Step 6 Integration & Isolation Audit
 ### Step 6 Completion Date
 
 2026-09-22
+
+## Phase 0 — Group D: Infrastructure & Docker Profile
+
+**Group D status: CLOSED**
+
+Group D established, hardened, and runtime-verified the local Docker Compose infrastructure for AegisOps. The approved architecture keeps the frontend and backend host-run while Docker Compose provides the supporting services.
+
+The final profile architecture is:
+
+```text
+core
+├── postgres
+└── redis
+
+messaging
+└── kafka
+
+storage
+└── minio
+
+vector
+├── etcd
+├── minio
+└── milvus
+```
+
+MinIO is intentionally shared by the `storage` and `vector` profiles. No duplicate MinIO service was introduced.
+
+### Group D task status
+
+| Task | Status |
+|---|---|
+| 7.1 — Existing Infrastructure & Compose Audit | ✅ Complete |
+| 7.2 — Compose Service Architecture & Profiles | ✅ Complete |
+| 7.3 — PostgreSQL & Redis Foundation | ✅ Complete |
+| 7.4 — Kafka Infrastructure Foundation | ✅ Complete |
+| 7.5 — MinIO Object Storage Foundation | ✅ Complete |
+| 7.6 — Milvus Standalone Foundation | ✅ Complete |
+| 7.7 — Dependency, Persistence & Environment Hardening | ✅ Complete |
+| 7.8 — Full Compose Integration & Health Audit | ✅ Complete |
+| **Group D** | **✅ CLOSED** |
+
+### Step 7.8 — Full Compose Integration & Health Audit
+
+**Status: PASS WITH RUNTIME CORRECTIONS**
+
+The final integration audit confirmed that Docker Desktop, the Docker daemon, and Compose were available and operational. All four profiles were tested individually and the complete infrastructure stack was started together.
+
+The unified stack reached the expected healthy state:
+
+| Service | Final runtime state |
+|---|---|
+| PostgreSQL | ✅ Running + healthy |
+| Redis | ✅ Running + healthy |
+| Kafka | ✅ Running + healthy |
+| MinIO | ✅ Running + healthy |
+| etcd | ✅ Running + healthy |
+| Milvus | ✅ Running + healthy |
+
+Runtime verification covered:
+
+- final Compose and profile resolution
+- individual profile startup
+- complete-stack coexistence
+- native PostgreSQL, Redis, Kafka, MinIO, and etcd probes
+- Milvus HTTP readiness
+- health-based dependency startup for Milvus on etcd and MinIO
+- expected host-facing port exposure, with etcd remaining internal-only
+- shared MinIO behavior across storage and vector profiles
+- persistent volume attachment
+- non-destructive stop, recreation, and recovery to healthy state
+- final log inspection for startup/configuration errors
+
+The infrastructure was left running and healthy for local development.
+
+### Runtime corrections accepted during Step 7.8
+
+Two objective defects were discovered during live execution and corrected within scope:
+
+- **MinIO image source:** the pinned MinIO release was moved from the Docker Hub image reference to the equivalent pinned Quay image after the original pull failed. The replacement pulled and ran successfully.
+- **Kafka data directory:** Kafka exposed a filesystem-permission problem with the previous `/tmp/kraft-combined-logs` volume path. The mounted volume and `KAFKA_LOG_DIRS` were changed to `/var/lib/kafka/data`; Kafka then remained healthy and its native broker probe succeeded.
+
+The runtime-verified Kafka persistence mapping therefore takes precedence over the earlier static baseline:
+
+```text
+kafka_data → /var/lib/kafka/data
+```
+
+No unrelated files or application features were introduced during the audit. The final repository change was limited to the Compose runtime corrections.
+
+### Group D closure
+
+Step 7.8 is approved and Group D is formally closed. The infrastructure now has evidence for configuration, image pull, startup, readiness, dependency ordering, full-stack coexistence, persistent volume attachment, non-destructive recreation, and recovery to healthy state.
+
+**GROUP D COMPLETE — READY FOR NEXT IMPLEMENTATION GROUP**

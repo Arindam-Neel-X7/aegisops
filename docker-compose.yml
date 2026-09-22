@@ -3,10 +3,12 @@ services:
     image: postgres:16-alpine
     container_name: aegisops-postgres
     restart: unless-stopped
+    profiles:
+      - core
     environment:
-      POSTGRES_USER: aegisops
-      POSTGRES_PASSWORD: aegisops
-      POSTGRES_DB: aegisops
+      POSTGRES_USER: ${POSTGRES_USER:-aegisops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aegisops}
+      POSTGRES_DB: ${POSTGRES_DB:-aegisops}
     ports:
       - "5432:5432"
     volumes:
@@ -17,5 +19,132 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    profiles:
+      - core
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: aegisops-kafka
+    restart: unless-stopped
+    profiles:
+      - messaging
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2024-04-18T19-09-19Z
+    container_name: aegisops-minio
+    restart: unless-stopped
+    profiles:
+      - storage
+      - vector
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-aegisops}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-aegisops-dev-secret}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.14
+    container_name: aegisops-etcd
+    restart: unless-stopped
+    profiles:
+      - vector
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    command:
+      - etcd
+      - -advertise-client-urls=http://etcd:2379
+      - -listen-client-urls
+      - http://0.0.0.0:2379
+      - --data-dir
+      - /etcd
+    volumes:
+      - etcd_data:/etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  milvus:
+    image: milvusdb/milvus:v2.4.5
+    container_name: aegisops-milvus
+    restart: unless-stopped
+    profiles:
+      - vector
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MINIO_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-aegisops}
+      MINIO_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-aegisops-dev-secret}
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - milvus_data:/var/lib/milvus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
 volumes:
   pgdata:
+  kafka_data:
+  minio_data:
+  etcd_data:
+  milvus_data:

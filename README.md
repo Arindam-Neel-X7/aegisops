@@ -173,10 +173,10 @@ cp .env.example .env
 # Edit .env with your local configuration
 ```
 
-### 3. Start Infrastructure (Core Profile)
+### 3. Start Infrastructure (Core, Messaging, Storage & Vector Profiles)
 
 ```bash
-docker compose --profile core up -d
+docker compose --profile core --profile messaging --profile storage --profile vector up -d
 ```
 
 ### 4. Run Database Migrations
