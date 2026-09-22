@@ -1,8 +1,8 @@
 AegisOps Implementation Progress
-Last updated: 2026-09-22
+Last updated: 2026-09-23
 Current phase: 0 - Foundation
-Current step: 9.8 - Step 9 Scope / Regression Audit ✅
-Status: Steps 8 and 9 complete — telemetry contracts and simulator interfaces are implemented, verified, and formally closed. Step 10 is next.
+Current step: 10.8 - Schema Validation, Cross-Contract & Scope Audit ✅
+Status: Step 10 complete — research experiment manifest, fault ground-truth schema, fault catalogue, research artifact guide, formal schema validation, cross-contract audit, backend regression, and scope closure are complete. Step 11 is next.
 Verified completed work
 Step 1 - Monorepo scaffold and conventions
 The repository has the planned top-level backend, frontend, infrastructure,
@@ -832,5 +832,234 @@ All four Step 9 source-of-truth requirements are implemented and verified:
 - Ground-truth record format — YES
 - Telemetry emission interface — YES
 Public API, tests, static verification, regression status, scope boundaries, and repository hygiene all passed the final closure gate.
+Phase 0 — Step 10: Research Experiment Manifest & Fault Ground-Truth Format
+Status: COMPLETE — APPROVED AND FORMALLY CLOSED
+Step 10 established the Phase 0 research-contract layer for reproducible AegisOps experiments. The work was completed through eight isolated tasks:
+- Step 10.1 — Existing Research Structure & Requirements Audit
+- Step 10.2 — Experiment Manifest Contract Design
+- Step 10.3 — Fault Ground-Truth Contract Design & Step 9 Alignment
+- Step 10.4 — Implement Experiment Manifest JSON Schema
+- Step 10.5 — Implement Ground-Truth JSON Schema
+- Step 10.6 — Fault Catalogue Documentation
+- Step 10.7 — Research Artifact Structure Guide
+- Step 10.8 — Schema Validation, Cross-Contract & Scope Audit
+Step 10 implementation artifacts
+The final Step 10 artifact set is:
+- research/configs/experiment_manifest.schema.json
+- research/configs/faults/ground_truth.schema.json
+- research/configs/faults/README.md
+- research/README.md
+No runtime simulator, experiment runner, evaluation runner, persistence layer, or Step 11 CI implementation was introduced.
+Experiment manifest contract
+research/configs/experiment_manifest.schema.json defines the declarative configuration contract for reproducible experiments.
+Required top-level fields:
+- schema_version
+- experiment_id
+- name
+- seed
+- dataset
+- scenario
+- evaluation
+- outputs
+- reproducibility
+Optional top-level fields:
+- description
+- metadata
+Key semantics:
+- JSON Schema dialect: Draft 2020-12
+- schema_version is fixed to "1.0"
+- experiment_id uses UUID format
+- seed is a non-negative integer
+- dataset requires name and version, with optional reference
+- scenario requires scenario_id and config_reference
+- scenario.config_reference points to scenario/fault configuration, not ground truth or results
+- evaluation requires a non-empty unique list of requested metric names
+- outputs require a non-empty artifact_root
+- reproducibility is required and must contain a non-empty freeform conditions object
+- optional reproducibility metadata includes code_version and environment
+- root and structured nested objects reject unknown properties
+- metadata and reproducibility.conditions remain intentionally freeform
+The manifest contains configuration only. It does not contain measured latency, anomaly scores, benchmark results, RCA outputs, remediation outcomes, recovery times, or other experiment results.
+Ground-truth contract
+research/configs/faults/ground_truth.schema.json defines the external research representation of the approved Step 9 GroundTruthRecord.
+Required fields:
+- record_id
+- fault_id
+- target_service_id
+- fault_type
+- injected_at
+- expected_root_cause
+Optional fields:
+- expected_affected_service_ids
+- metadata
+Canonical fault types remain exactly:
+- latency
+- error
+- timeout
+- crash
+- resource
+- network
+Key semantics:
+- IDs use UUID format
+- injected_at uses RFC 3339 date-time semantics
+- expected_root_cause is the known root cause intentionally introduced by the experiment
+- expected_affected_service_ids is an optional unique UUID array; an empty array is allowed
+- target service may appear in the affected-service list but is not required to
+- metadata is optional and freeform
+- one ground-truth record corresponds to one injected fault
+- ground truth is known injected truth, not a model prediction, RCA result, anomaly result, remediation result, or evaluation score
+The Step 9 Python contract and Step 10 external schema remain semantically aligned.
+Fault catalogue documentation
+research/configs/faults/README.md documents the canonical fault taxonomy and the relationship among FaultSpec, scenario configuration, injected faults, and ground-truth records.
+It documents:
+- all six canonical fault categories
+- FaultSpec field meanings
+- positive optional duration_seconds semantics
+- generic fault-specific parameter semantics
+- one-fault-per-ground-truth-record behavior
+- expected affected-service semantics
+- metadata safety boundaries
+- reproducibility guidance
+- extension rules
+- controlled research/simulator safety boundaries
+The documentation intentionally avoids destructive host commands, production chaos instructions, packet manipulation steps, or operational fault-injection procedures.
+Research artifact structure guide
+research/README.md documents the Phase 0 research structure:
+research/
+├── configs/
+│   ├── experiment_manifest.schema.json
+│   └── faults/
+│       ├── ground_truth.schema.json
+│       └── README.md
+├── datasets/
+├── experiments/
+├── notebooks/
+├── reports/
+└── results/
+The guide defines intended roles for configuration, datasets, experiment definitions, exploratory notebooks, machine-oriented results, and human-readable reports.
+It also documents:
+- dataset/version provenance
+- random-seed requirements
+- reproducibility conditions
+- comparative experiment methodology
+- preservation of identical fault scenarios and evaluation conditions where possible
+- negative results, failed fault scenarios, and false positives as valid research evidence
+- separation between requested metrics and measured results
+- schema validation guidance
+- sensitive-data restrictions
+- future research-contract extension rules
+Step 10 validation
+The initial Step 10.4 and Step 10.5 implementation passes recorded a validation limitation because the project environment did not include jsonschema.
+Step 10.8 first confirmed:
+- both schema files parse as valid JSON
+- all four Step 10 artifacts are present
+- manifest and ground-truth contracts match the locked Step 10.2 and 10.3 designs
+- Step 9 ↔ Step 10 semantics remain aligned
+- both READMEs are consistent with the schemas
+- no runtime implementation or Step 11 leakage occurred
+The only initial Step 10.8 blocker was the lack of formal JSON Schema validation tooling.
+Corrective formal schema validation
+The blocker was resolved using a temporary Python virtual environment outside the repository.
+Validation tooling:
+- jsonschema 4.26.0
+- Draft 2020-12 validator
+- active FormatChecker
+- RFC 3339/date-time format support
+No project dependency file was modified.
+Formal validation results:
+- experiment manifest Draft 2020-12 meta-validation — PASS
+- ground-truth Draft 2020-12 meta-validation — PASS
+- UUID format assertion — PASS
+- date-time format assertion — PASS
+- valid UUID accepted — YES
+- malformed UUID rejected — YES
+- UTC timestamp accepted — YES
+- offset timestamp accepted — YES
+- naive timestamp rejected — YES
+- malformed timestamp rejected — YES
+Experiment-manifest instance validation:
+- representative valid manifest — PASS
+- 28 expected-invalid cases — all rejected as expected
+- freeform metadata object — accepted as expected
+- freeform reproducibility conditions — accepted as expected
+Ground-truth instance validation:
+- full valid record — PASS
+- minimal valid record — PASS
+- 16 expected-invalid cases — all rejected as expected
+- 5 expected-valid optional/freeform behavior cases — all accepted as expected
+The temporary validation environment was removed after use.
+Step 10 regression verification
+Final closure retained the previously verified backend evidence:
+- focused Step 8 + Step 9 compatibility suite — 47 passed, 0 failed, 0 skipped
+- full backend pytest — 55 passed
+- backend-wide Ruff — PASS
+- backend-wide mypy — PASS
+No backend regression was introduced by Step 10.
+Step 10 cross-contract architecture
+The research artifact flow is now:
+Experiment Manifest
+        ↓
+Scenario / Fault Configuration
+        ↓
+Injected Fault
+        ↓
+Ground-Truth Record
+        ↓
+Evaluation Results
+        ↓
+Research Analysis / Report
+The key contract boundaries are locked:
+- manifest = experiment configuration
+- scenario reference = fault/scenario configuration
+- ground truth = known injected truth
+- results = measured evidence
+- reports = human-readable analysis
+No ground-truth record is treated as scenario configuration, and measured results are not embedded in either schema.
+Step 10 security and research-discipline boundaries
+The completed research documentation prohibits use of research artifacts for:
+- passwords
+- API keys
+- access tokens
+- production credentials
+- secret-bearing connection strings
+- unnecessary PII
+The research methodology also preserves these requirements:
+- random seed recorded
+- dataset/version recorded
+- comparable fault scenarios preserved where possible
+- comparable evaluation conditions preserved where possible
+- negative results retained
+- failed fault scenarios retained
+- false positives retained
+- model confidence distinguished from empirical accuracy
+- target or planned performance values are not presented as measured results
+Step 10 scope isolation
+Step 10 introduced no:
+- experiment runner
+- concrete simulator runtime
+- concrete fault injector
+- concrete telemetry emitter
+- Kafka producer/consumer
+- database persistence
+- SQLAlchemy research models
+- ML training pipeline
+- evaluation runner
+- orchestration engine
+- scenario schema
+- result schema
+- Step 11 CI implementation
+Step 10 remained strictly a research schema, contract, documentation, and validation step.
+Step 10 repository hygiene
+During Step 10 execution and final validation:
+- no unrelated tracked files were modified
+- staging area remained empty
+- no commit or push was performed
+- temporary validation files/environments were removed
+- final corrective validation left repository state identical to its pre-validation state
+The Step 10 artifacts may remain untracked until an explicit staging/commit task is performed.
+Step 10 final status
+COMPLETE — APPROVED AND FORMALLY CLOSED
+All four source-plan Step 10 artifacts exist, their semantics are aligned, both JSON Schemas are formally validated under Draft 2020-12 with active format checking, representative instances behave correctly, cross-contract consistency is verified, backend regressions remain clean, and repository scope/hygiene are preserved.
 Immediate next action
-Step 10 — Research Experiment Manifest & Ground-Truth Schema is the next implementation step. No Step 10 implementation has been started in this progress update.
+Step 11 — CI Foundation is the next Phase 0 implementation step.
+No Step 11 implementation has been started in this progress update

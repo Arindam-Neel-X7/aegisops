@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AegisOps Fault Ground-Truth Record",
+  "description": "KNOWN injected fault truth used for deterministic research evaluation, not predicted or measured results.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_id",
+    "fault_id",
+    "target_service_id",
+    "fault_type",
+    "injected_at",
+    "expected_root_cause"
+  ],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Stable unique identity of the ground-truth record."
+    },
+    "fault_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identity of the corresponding injected fault."
+    },
+    "target_service_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identity of the service targeted by the injected fault."
+    },
+    "fault_type": {
+      "type": "string",
+      "enum": [
+        "latency",
+        "error",
+        "timeout",
+        "crash",
+        "resource",
+        "network"
+      ],
+      "description": "Classification of the fault."
+    },
+    "injected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timezone-aware RFC 3339 injection timestamp."
+    },
+    "expected_root_cause": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Known root cause intentionally introduced by the experiment."
+    },
+    "expected_affected_service_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "description": "Known downstream blast radius. Omission or empty array indicates only target or no known downstream effect."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Freeform JSON-safe research annotations. MUST NOT contain secrets or measured model outputs."
+    }
+  }
+}

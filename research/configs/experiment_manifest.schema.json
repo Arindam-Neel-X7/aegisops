@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AegisOps Experiment Manifest",
+  "description": "Declarative, reproducible experiment configuration. Does NOT contain measured results.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "experiment_id",
+    "name",
+    "seed",
+    "dataset",
+    "scenario",
+    "evaluation",
+    "outputs",
+    "reproducibility"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Exact schema version (locked to 1.0 for Phase 0)"
+    },
+    "experiment_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identity of the configured experiment"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable name of the experiment"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional extended context or purpose of the experiment"
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Deterministic random seed required for reproducible execution"
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the target dataset"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Specific version or tag of the dataset"
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Logical or project-portable dataset location reference"
+        }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario_id",
+        "config_reference"
+      ],
+      "properties": {
+        "scenario_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Logical identity of the fault scenario"
+        },
+        "config_reference": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference to the external scenario/fault CONFIGURATION used to reproduce the experiment"
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metrics"
+      ],
+      "properties": {
+        "metrics": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Requested metrics to collect/evaluate later (not measured results)"
+        }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_root"
+      ],
+      "properties": {
+        "artifact_root": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Logical or project-portable root/reference for experiment outputs"
+        }
+      }
+    },
+    "reproducibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conditions"
+      ],
+      "properties": {
+        "code_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Code revision (e.g. Git SHA or semantic version) to use"
+        },
+        "environment": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target environment constraints"
+        },
+        "conditions": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": true,
+          "description": "Freeform JSON object for logging external fixed conditions (no secrets allowed)"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Freeform JSON-safe research annotations (no secrets or measured values)"
+    }
+  }
+}
