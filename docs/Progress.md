@@ -1,8 +1,8 @@
 AegisOps Implementation Progress
 Last updated: 2026-09-23
 Current phase: 0 - Foundation
-Current step: 11.8 - Final CI Scope, Regression & Closure Audit ✅
-Status: Step 11 complete — CI architecture, backend/frontend quality gates, Jest test foundation, Docker core-profile validation contract, GitHub Actions workflow implementation, static validation, local command parity, and final closure audit are complete. Step 12 — Clean-Machine Bootstrap is next, followed by Step 13 — Freeze Phase 0 Definition of Done.
+Current step: 12.8 - Step 12 End-to-End Scope, Regression & Closure Audit ✅
+Status: Step 12 complete — cross-platform bootstrap scripts, prerequisite enforcement, dependency installation, core Docker startup, migrations, health/readiness validation, backend/frontend quality gates, idempotency, controlled reproducibility evidence, and final closure audit are complete. Step 12 is approved and formally closed. Step 13 — Freeze Phase 0 Definition of Done — is authorized next but has not yet been executed; Phase 0 is therefore not yet frozen.
 Verified completed work
 Step 1 - Monorepo scaffold and conventions
 The repository has the planned top-level backend, frontend, infrastructure,
@@ -1286,3 +1286,352 @@ Its approved scope includes:
 - lint/tests as defined by the Phase 0 plan
 Step 12 is not the final Phase 0 task.
 After Step 12, Step 13 — Freeze Phase 0 Definition of Done remains before Phase 0 can be considered fully frozen and ready for the next implementation phase.
+Phase 0 — Step 12: Clean-Machine Bootstrap
+Status: COMPLETE — APPROVED AND FORMALLY CLOSED
+Step 12 established the Phase 0 clean-machine/bootstrap foundation for AegisOps. It produced cross-platform bootstrap entry points, verified their contract and safety semantics, executed the PowerShell path end-to-end under the frozen runtime/toolchain requirements, demonstrated repeatability, and completed a controlled reproducibility and closure audit.
+The work was intentionally decomposed into isolated tasks and corrective subtasks so that environment failures, script defects, and verification evidence could be separated cleanly rather than repaired implicitly inside a broader execution task.
+Step 12 task history
+- Step 12.1 — Existing Bootstrap Surface & Prerequisite Audit
+- Step 12.2 — Bootstrap Contract & Cross-Platform Execution Design
+- Step 12.3 — Implement scripts/bootstrap.sh
+- Step 12.4 — Implement scripts/bootstrap.ps1
+- Step 12.5 — Static Validation, Failure Handling & Cross-Platform Parity Audit
+- Step 12.6 — Local Bootstrap Execution & Core-Service Verification
+  - Step 12.6A — Prepare Node 24 Runtime
+  - Step 12.6B — Full Bootstrap Execution & Core-Service Verification
+  - Step 12.6C — Restore Docker Daemon Availability
+  - Step 12.6D — Docker Desktop Stability Verification & Crash Root-Cause Isolation
+  - Step 12.6E — Post-WSL-Reset Docker Startup Failure Isolation
+  - Step 12.6F — Repair PowerShell Python-Version Validation Defect
+- Step 12.7 — Clean-Machine / Reproducibility Test & Recorded Evidence
+- Step 12.8 — Step 12 End-to-End Scope, Regression & Closure Audit
+Step 12 implementation artifacts
+Step 12 intentionally introduced only:
+- scripts/bootstrap.sh
+- scripts/bootstrap.ps1
+At Step 12 closure both files remained intentionally untracked, with no staged files, no unrelated repository changes, and no commit/push performed.
+No application feature source, database feature schema, telemetry logic, AI/ML logic, Kafka runtime, Temporal runtime, frontend product feature, README rewrite, Progress update, or Step 13 freeze work was introduced by the Step 12 implementation itself.
+Frozen prerequisite contract
+The final bootstrap prerequisite contract is:
+- Python — exact major/minor 3.11
+- Poetry — exact 2.4.3
+- Node — exact major 24.x
+- npm — availability required; exact version not pinned
+- Docker — reachable daemon required
+- Compose — docker compose / Compose v2-style interface
+- PowerShell — >= 5.1
+- Bash — >= 3.2
+- Git — optional; not a bootstrap prerequisite
+- .env — not required
+- host PostgreSQL client — not required
+- host Redis CLI — not required
+- curl — not required
+- pipx — not required by bootstrap
+The validated Windows host used:
+- Python 3.11.9
+- Poetry 2.4.3
+- fnm 1.39.0
+- Node v24.21.0 in the scoped bootstrap context
+- default host Node v26.7.0
+- npm 11.19.0
+- Docker Server 29.8.0
+- Docker Compose v5.5.1
+- Windows PowerShell 5.1
+Node 24 activation remained process-scoped through fnm; the normal host Node installation remained unchanged at v26.7.0 after bootstrap execution.
+Process-local backend environment contract
+For backend bootstrap commands, the accepted local values are process-local only:
+DATABASE_URL=postgresql+asyncpg://aegisops:aegisops@localhost:5432/aegisops
+REDIS_HOST=localhost
+REDIS_PORT=6379
+The bootstrap does not persist these values to .env, does not require a repository environment file, and does not print inherited secret-bearing values.
+Core Docker bootstrap scope
+The bootstrap validates Compose with:
+docker compose --profile core config --quiet
+and starts:
+docker compose --profile core up -d
+The intended bootstrap-managed services are only:
+- PostgreSQL
+- Redis
+Kafka, MinIO, Milvus, etcd, and other non-core profile services are not intentionally started by the bootstrap. Pre-existing non-core containers observed during validation were explicitly distinguished from services started by the bootstrap itself.
+Docker health and functional verification
+Docker container health polling remains bounded to:
+- 30 attempts
+- 2-second interval
+Accepted state handling:
+- healthy → success
+- starting → continue polling
+- unhealthy → fail
+- exited/stopped → fail
+- missing container/ID → fail
+- inspect failure → fail
+- still starting at timeout → fail
+Container-native functional checks are:
+- PostgreSQL — pg_isready
+- Redis — redis-cli ping expecting PONG
+No host PostgreSQL or Redis command-line client is required.
+Port 8000 safety correction
+Step 12.4 and Step 12.5 converged both platform implementations on bind-based port availability semantics.
+PowerShell uses a loopback TcpListener bind on port 8000.
+Bash uses a Python socket bind on 127.0.0.1:8000.
+The final semantics are:
+- successful bind → port available
+- bind failure → occupied/unavailable
+- no unknown process is killed
+The earlier client-connect style check was removed because it could misclassify availability.
+Temporary Uvicorn process ownership correction
+Both bootstrap implementations resolve the Poetry environment and start Uvicorn through the environment's actual Python executable.
+PowerShell:
+<venv>\Scripts\python.exe -m uvicorn ...
+Bash:
+<venv>/bin/python -m uvicorn ...
+This ensures that the PID/process tracked by the bootstrap is the actual temporary backend process rather than a Poetry wrapper process. Cleanup targets only the backend process created by the bootstrap.
+Temporary backend logs use operating-system temporary storage and do not create repository-local log artifacts.
+HTTP contracts
+The bootstrap validates the live backend semantically.
+/health:
+{"status":"ok","version":"0.1.0"}
+Required result:
+- HTTP 200
+- status == "ok"
+- version == "0.1.0"
+/ready:
+{"status":"ready"}
+Required result:
+- HTTP 200
+- status == "ready"
+Database-not-ready behavior remains:
+- HTTP 503
+- {"status":"not_ready"}
+A Step 12.6B report initially transcribed /ready as status: ok; targeted evidence review confirmed this was only a reporting error. The backend implementation and bootstrap assertion both require status == "ready".
+Migration and quality-gate contract
+Migration command:
+poetry run alembic upgrade head
+Closure-state verification confirmed:
+current: 20260918_0001 (head)
+head:    20260918_0001 (head)
+Backend quality gates remain:
+poetry run ruff check app tests
+poetry run mypy app
+poetry run pytest tests -q
+Frontend sequence remains:
+npm ci
+npm run lint
+npm run type-check
+npm test
+npm run build
+The successful runtime baseline recorded:
+- Ruff — PASS
+- mypy — PASS, 21 source files
+- pytest — 55 passed
+- frontend lint — PASS
+- frontend type-check — PASS
+- Jest — 3 passed
+- Next.js build — PASS
+Step 12.6A — Node 24 runtime preparation
+The initial Step 12.6 execution was blocked because the normal host had Node v26.7.0 while the bootstrap reproducibility contract required Node 24.x.
+Step 12.6A prepared the runtime without altering the repository:
+- fnm 1.39.0 installed for the user
+- Node v24.21.0 installed through fnm
+- nested child PowerShell inheritance was proven
+- default host Node remained v26.7.0
+The validated execution topology became:
+fnm env
+→ fnm use v24.21.0
+→ child PowerShell
+→ scripts/bootstrap.ps1
+A temporary installer scratch file had been created outside the final repository state during the original preparation attempt and was removed; no AegisOps source/configuration artifact remained from that setup.
+Docker environment investigation during Step 12.6
+Several Step 12.6B attempts were blocked before bootstrap execution because Docker Desktop's daemon was unavailable or had exited.
+The environment investigation established the following history:
+- Docker CLI and Compose were installed and functional.
+- Docker Desktop could temporarily recover through normal startup.
+- a historical WSL startup error was observed: WSL_E_USER_VHD_ALREADY_ATTACHED.
+- absence of a docker-desktop-data distro was correctly rejected as proof of corruption.
+- Docker data VHDX remained present and existing Docker data was preserved.
+- no Docker factory reset, purge, reinstall, volume deletion, image deletion, or prune was performed.
+- a later single normal docker desktop start recovered the daemon cleanly and the historical stale-VHD error did not recur.
+- manual Docker Desktop execution was retained during the final successful bootstrap verification because the host had shown intermittent Docker Desktop background stability issues.
+The Docker host issue was treated as an environment problem rather than silently modifying AegisOps code.
+Step 12.6F — PowerShell Python-version correction
+The first genuine bootstrap implementation defect surfaced after Docker and Node prerequisites were satisfied.
+The PowerShell script passed malformed Python:
+import sys; print(f{sys.version_info.major}.{sys.version_info.minor})
+causing a Python SyntaxError.
+The isolated correction changed only scripts/bootstrap.ps1 and replaced the fragile nested quoting with:
+$PyVer = python -c 'import sys; print(str(sys.version_info.major) + chr(46) + str(sys.version_info.minor))'
+Targeted verification established:
+- PowerShell 5.1 parser — PASS
+- command exit code — 0
+- output — exactly 3.11
+- Python 3.11.9 — accepted
+- 3.10 — rejected
+- 3.12 — rejected
+- exact major/minor contract preserved
+- scripts/bootstrap.sh unchanged
+- no full bootstrap run during the correction task
+Step 12.6B — final full runtime verification
+After prerequisite/environment resolution and the Python-version correction, Step 12.6B completed successfully.
+First full run:
+- Node context — v24.21.0
+- exit code — 0
+- elapsed — approximately 4m 50s
+- Poetry install — PASS
+- npm ci — PASS
+- PostgreSQL — running and healthy
+- Redis — running and healthy
+- pg_isready — accepting connections
+- Redis — PONG
+- Alembic current == head
+- /health — PASS
+- /ready — PASS
+- temporary backend cleanup — PASS
+- port 8000 released — PASS
+- Ruff — PASS
+- mypy — PASS
+- pytest — 55 passed
+- frontend lint — PASS
+- frontend type-check — PASS
+- Jest — 3/3 passed
+- Next.js build — PASS
+Second full run:
+- executed with the same bootstrap path
+- exit code — 0
+- elapsed — approximately 1m 42s
+- existing Poetry environment tolerated
+- frontend dependency installation repeatable
+- existing containers tolerated
+- PostgreSQL data preserved
+- schema remained at Alembic head
+- health checks repeated successfully
+- temporary backend safely started/stopped again
+- quality gates passed again
+- PostgreSQL and Redis remained healthy
+- port 8000 was available after cleanup
+Success intentionally left core Docker services running.
+No docker compose down, down -v, destructive volume operation, or prune was executed.
+The default host returned/remained at Node v26.7.0 after the scoped Node 24 execution.
+Step 12.7 — controlled reproducibility test
+Step 12.7 performed a controlled local reproducibility reset rather than claiming a literal brand-new machine.
+The test deliberately disclosed that it was NOT executed on a separate physical or virtual pristine machine.
+Safely recreated:
+- frontend/node_modules
+- frontend/.next
+Preserved:
+- installed host runtimes
+- Docker images
+- Docker volumes
+- PostgreSQL data
+- Redis state
+- user-level Poetry cached environment
+The backend Poetry environment resolved to:
+C:\Users\User\AppData\Local\pypoetry\Cache\virtualenvs\aegisops-backend-kervcPng-py3.11
+Because it was a user-cache environment rather than an isolated repository-local environment, it was not destructively removed.
+Therefore:
+Backend dependency recreation: NOT SAFELY RESETTABLE
+rather than falsely claiming full backend-environment recreation.
+Frontend dependency/build recreation was proven:
+- node_modules removed → recreated by bootstrap
+- .next removed → recreated by next build
+- lockfiles remained unchanged
+Two reproducibility runs both exited 0.
+Run 1 recorded:
+- Ruff — PASS
+- mypy — PASS
+- pytest — 55 passed
+- frontend lint — PASS
+- frontend type-check — PASS
+- Jest — 3 passed
+- Next build — PASS
+- health/readiness — PASS
+Run 2 again completed successfully and proved repeatable/idempotent behavior.
+Final reproducibility matrix:
+- Fresh PowerShell session — PROVEN
+- Node 24 activation — PROVEN
+- Backend dependency recreation — NOT SAFELY RESETTABLE
+- Frontend dependency recreation — PROVEN
+- Docker core startup/reuse — PROVEN
+- Migration reproducibility — PROVEN
+- Health/readiness — PROVEN
+- Backend quality gates — PROVEN
+- Frontend quality gates — PROVEN
+- Second-run idempotency — PROVEN
+- Repository cleanliness — PROVEN
+- Host Node preservation — PROVEN
+Step 12.8 — end-to-end closure audit
+Step 12.8 was an audit-only task and made no repository changes.
+The closure audit confirmed:
+- both bootstrap deliverables exist
+- PowerShell Python-version correction remains present
+- PowerShell 5.1 parser errors — 0
+- Bash executable unavailable locally; manual Bash >=3.2 compatibility audit — PASS
+- prerequisite contract remains unchanged
+- process-local backend environment semantics remain intact
+- Docker core-profile scope remains correct
+- Docker health polling remains 30 attempts × 2 seconds
+- container-native PostgreSQL and Redis functional checks remain present
+- bind-based port safety remains present on both platforms
+- direct Uvicorn process ownership remains present
+- OS-temp logging contract remains present
+- HTTP semantic contracts remain correct
+- migration current == head
+- backend/frontend quality-gate sequences remain intact
+- failure-state safety remains non-destructive
+- idempotency design remains intact
+The PowerShell/Bash parity matrix covered 31 functional areas.
+Final result:
+Unexplained drift count: 0
+Intentional platform differences were limited to normal platform-specific mechanics such as port-bind implementation, venv Python path layout, and process termination.
+Step 12 regression audit
+The final closure audit specifically confirmed that the following corrections remain present:
+- Step 12.4 port-bind correction — PRESENT
+- Step 12.5 direct-Uvicorn process correction — PRESENT
+- Step 12.6F Python-version correction — PRESENT
+Final regression result:
+NO REGRESSION FOUND
+Step 12 repository hygiene
+At final Step 12 closure:
+- tracked modified — none
+- untracked — scripts/bootstrap.ps1, scripts/bootstrap.sh
+- staged — none
+- unrelated — none
+- .env — none
+- repository-local temporary bootstrap logs — none
+- diagnostic scratch artifacts in repository — none
+- lockfile modifications caused by Step 12 validation — none
+- destructive Docker cleanup — none
+- Step 13 work — none
+Step 12 accepted limitations
+The following limitations are explicitly preserved for future reference:
+1. The reproducibility test was a controlled local reset, not a separate pristine physical/virtual machine.
+2. The user-cache Poetry backend environment was not destructively recreated.
+3. Bash executable/syntax execution (bash -n) remained unavailable locally; Bash >=3.2 compatibility and PowerShell/Bash parity were validated manually.
+4. Docker Desktop on this Windows host showed intermittent background stability during Step 12.6; final successful verification was performed with Docker Desktop running and healthy.
+None of these limitations was judged blocking for Step 12 closure.
+Step 12 Definition-of-Done result
+The final audit answered YES to all Step 12 closure criteria:
+- cross-platform bootstrap scripts exist
+- prerequisites automated
+- dependency installation automated
+- core Docker startup automated
+- migrations automated
+- health/readiness automated
+- backend quality gates automated
+- frontend quality gates automated
+- failure handling safe
+- success leaves core running
+- idempotency proven
+- local execution proven
+- controlled reproducibility proven
+- limitations documented
+- repository scope isolated
+- no unresolved blocker
+Step 12 final status
+COMPLETE — APPROVED AND FORMALLY CLOSED
+Step 12 is complete and no additional Step 12 functionality should be added without a new explicitly approved change.
+Immediate next action
+Step 13 — Freeze Phase 0 Definition of Done is now authorized.
+Step 13 has NOT yet been executed.
+Accordingly:
+- Step 12 is formally closed.
+- Phase 0 is NOT yet frozen.
+- Do not represent Phase 0 as fully complete/frozen until Step 13 is executed, reviewed, and approved.
