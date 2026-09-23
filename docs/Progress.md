@@ -1,8 +1,8 @@
 AegisOps Implementation Progress
 Last updated: 2026-09-23
 Current phase: 0 - Foundation
-Current step: 10.8 - Schema Validation, Cross-Contract & Scope Audit ✅
-Status: Step 10 complete — research experiment manifest, fault ground-truth schema, fault catalogue, research artifact guide, formal schema validation, cross-contract audit, backend regression, and scope closure are complete. Step 11 is next.
+Current step: 11.8 - Final CI Scope, Regression & Closure Audit ✅
+Status: Step 11 complete — CI architecture, backend/frontend quality gates, Jest test foundation, Docker core-profile validation contract, GitHub Actions workflow implementation, static validation, local command parity, and final closure audit are complete. Step 12 — Clean-Machine Bootstrap is next, followed by Step 13 — Freeze Phase 0 Definition of Done.
 Verified completed work
 Step 1 - Monorepo scaffold and conventions
 The repository has the planned top-level backend, frontend, infrastructure,
@@ -1060,6 +1060,229 @@ The Step 10 artifacts may remain untracked until an explicit staging/commit task
 Step 10 final status
 COMPLETE — APPROVED AND FORMALLY CLOSED
 All four source-plan Step 10 artifacts exist, their semantics are aligned, both JSON Schemas are formally validated under Draft 2020-12 with active format checking, representative instances behave correctly, cross-contract consistency is verified, backend regressions remain clean, and repository scope/hygiene are preserved.
+Phase 0 — Step 11: CI Foundation — Lint, Type-Check, Tests, Build & Health Verification
+Status: COMPLETE — APPROVED AND FORMALLY CLOSED
+Step 11 established the complete Phase 0 continuous-integration quality-gate foundation for AegisOps. The work was completed through eight isolated tasks, with each task reviewed and approved before progression:
+- Step 11.1 — Existing CI, Tooling & Quality-Gate Audit
+- Step 11.2 — CI Architecture & Job/Trigger Design
+- Step 11.3 — Backend CI Contract & Health-Check Design
+- Step 11.4 — Frontend CI Contract & Test-Gap Resolution
+- Step 11.5 — Docker Core-Profile CI Contract
+- Step 11.6 — Implement .github/workflows/ci.yml
+- Step 11.7 — CI Static Validation & Local Command Parity Audit
+- Step 11.8 — Final CI Scope, Regression & Closure Audit
+Step 11 final implementation artifacts
+Primary Step 11 files:
+- .github/workflows/ci.yml
+- frontend/jest.config.js
+- frontend/tests/ui-store.test.ts
+- frontend/package.json — updated with the Jest test script/dev dependencies
+- frontend/package-lock.json — updated deterministically through npm
+No backend production source, frontend production source, Docker Compose topology, database models, migrations, telemetry contracts, simulator contracts, or research schemas were modified by Step 11.
+CI workflow architecture
+The final workflow is a single GitHub Actions pipeline:
+.github/workflows/ci.yml
+It contains three independent, parallel quality-gate jobs:
+CI
+├── backend-quality
+├── frontend-quality
+└── docker-core-health
+No needs: relationships or aggregation job are used.
+Trigger policy:
+- pull_request on master
+- push on master
+- workflow_dispatch
+- no schedule/cron
+- no path filters
+- no release/deployment trigger
+Security and execution policy:
+- permissions: contents: read
+- no write permissions
+- no production secrets
+- no GitHub Secrets required for the Phase 0 baseline
+- no matrix strategy
+- workflow/ref concurrency with cancel-in-progress: true
+- required quality gates are blocking
+- no success artifact uploads
+Backend CI contract
+backend-quality runs on ubuntu-latest with a 15-minute timeout.
+Runtime/tooling:
+- Python 3.11
+- Poetry 2.4.3
+- actions/setup-python@v5
+- Poetry cache keyed by backend/poetry.lock
+Frozen setup order:
+checkout
+→ pipx install poetry==2.4.3
+→ setup-python@v5 (Python 3.11 + Poetry cache)
+→ poetry install --no-interaction --no-ansi
+The backend job provisions its own isolated GitHub Actions PostgreSQL service container:
+- image: postgres:16-alpine
+- CI-local user/database/password: aegisops
+- port: 5432:5432
+- health command: pg_isready -U aegisops -d aegisops
+- DATABASE_URL=postgresql+asyncpg://aegisops:aegisops@localhost:5432/aegisops
+No production credential is used.
+Backend blocking gates:
+poetry install --no-interaction --no-ansi
+poetry run ruff check app tests
+poetry run mypy app
+poetry run pytest tests -q
+Migrations are intentionally not run by this job because the /ready contract performs a connectivity-only SELECT 1 check and does not require application schema state.
+Live application validation:
+poetry run uvicorn app.main:app --host 127.0.0.1 --port 8000
+The CI job performs bounded semantic HTTP validation of:
+- /health → HTTP 200, status == "ok", version == "0.1.0"
+- /ready → HTTP 200, status == "ready"
+The backend process is PID-tracked, logs are available for failure diagnostics, and an always() cleanup step terminates Uvicorn.
+Frontend CI contract and automated-test gap closure
+frontend-quality runs on ubuntu-latest with a 15-minute timeout.
+Runtime/tooling:
+- Node 24
+- actions/setup-node@v4
+- npm cache keyed by frontend/package-lock.json
+The frozen command sequence is:
+npm ci
+npm run lint
+npm run type-check
+npm test
+npm run build
+All commands run from frontend/ and are blocking.
+Step 11.1 identified that the frontend had no automated test infrastructure. Step 11.4 closed this gap with a deliberately minimal Jest foundation:
+- Jest via next/jest
+- @types/jest
+- testEnvironment: "node"
+- no jsdom dependency
+- no React Testing Library dependency
+- no Babel/ts-jest layer
+- no --passWithNoTests
+- non-interactive test script: jest --runInBand
+Baseline test file:
+- frontend/tests/ui-store.test.ts
+It exercises real existing Zustand UI-store behavior:
+- sidebar is open by default
+- sidebar toggle behavior
+- explicit sidebar setter behavior
+Production frontend source was not modified to facilitate testing.
+Docker core-profile CI contract
+docker-core-health runs on ubuntu-latest with a 10-minute timeout.
+It validates the actual repository Compose foundation rather than using alternate service definitions.
+Core scope:
+- PostgreSQL — postgres:16-alpine
+- Redis — redis:7-alpine
+Frozen flow:
+docker compose --profile core config
+→ docker compose --profile core up -d
+→ bounded PostgreSQL Docker-health polling
+→ bounded Redis Docker-health polling
+→ pg_isready functional assertion
+→ redis-cli ping / PONG assertion
+→ docker compose --profile core ps
+→ failure diagnostics if required
+→ always: docker compose --profile core down -v --remove-orphans
+Health polling is bounded to approximately 60 seconds per service contract using 30 attempts at 2-second intervals.
+The PostgreSQL pgdata volume is removed during CI teardown; Docker data is not used as a cache.
+The Docker job is intentionally independent of backend-quality:
+- backend-quality validates backend code and live application readiness with its own PostgreSQL service container
+- docker-core-health validates the repository's actual Compose core profile and both Postgres/Redis health contracts
+Step 11 regression and parity evidence
+Step 11.7 provided the final static and local command-parity evidence.
+Backend local parity:
+- poetry install --no-interaction --no-ansi — PASS
+- Ruff — PASS
+- mypy — PASS
+- pytest — 55 passed
+Frontend local parity:
+- npm ci — PASS
+- npm run lint — PASS, 0 warnings
+- npm run type-check — PASS
+- npm test — PASS, 1 suite / 3 tests / 0 failures / 0 skipped
+- npm run build — PASS
+YAML / workflow validation:
+- workflow YAML parser validation — PASS
+- CI topology/static contract — PASS
+- Poetry/cache setup order — PASS
+- backend shell/health logic — PASS
+- frontend Linux/Jest contract — PASS
+- Docker orchestration/health-loop shell logic — PASS (static)
+Documented local-environment limitation
+Live Docker runtime parity was not fully executed locally because the Docker daemon API was unavailable in the validation environment.
+Accordingly, the closure evidence deliberately distinguishes:
+Docker CI contract / static orchestration logic → PASS
+Live local Docker runtime parity                → NOT FULLY EXECUTED
+                                                    (local-environment limitation)
+The same limitation prevented full local PostgreSQL-backed /ready parity execution. This was retained as a documented environment limitation rather than represented as a successful local runtime test.
+This limitation was reviewed during Step 11.8 and was not considered an implementation blocker because the workflow structure, commands, polling semantics, functional assertions, cleanup paths, backend/frontend local parity, and GitHub Actions contracts were all validated without discovering a CI defect.
+Step 11 requirement traceability
+The original Step 11 Phase 0 requirements are now covered:
+Backend:
+- dependency installation — YES
+- Ruff lint — YES
+- mypy — YES
+- pytest — YES
+- live health/readiness contract — YES
+Frontend:
+- deterministic npm install — YES
+- ESLint — YES
+- TypeScript type-check — YES
+- Jest — YES
+- Next.js production build — YES
+Docker:
+- Compose core-profile configuration/startup contract — YES
+- PostgreSQL health — YES
+- Redis health — YES
+- functional Postgres/Redis assertions — YES
+- deterministic cleanup — YES
+Foundation controls:
+- pull-request validation — YES
+- primary-branch validation — YES
+- manual dispatch — YES
+- least-privilege permissions — YES
+- bounded execution — YES
+- deterministic runtime choices — YES
+- dependency caching without bypassing installs — YES
+- no production secrets — YES
+Step 11 scope isolation
+Step 11 introduced no:
+- product feature UI
+- authentication implementation
+- incident-management runtime
+- RCA implementation
+- remediation implementation
+- telemetry runtime
+- Kafka runtime
+- simulator runtime
+- new database models or migrations
+- research schema changes
+- deployment infrastructure
+- Step 12 bootstrap scripts
+- Step 13 Phase 0 DoD freeze work
+Step 11 remained strictly within CI, quality-gate, and frontend-test-foundation scope.
+Step 11 repository hygiene
+At final closure:
+- no unrelated repository changes were present
+- staging area remained empty
+- no commit or push was performed during the isolated Step 11 tasks
+- Step 11.8 made no repository modifications
+Final Step 11 implementation delta is intentionally bounded to:
+- .github/workflows/ci.yml
+- frontend/jest.config.js
+- frontend/tests/ui-store.test.ts
+- frontend/package.json
+- frontend/package-lock.json
+Step 11 final status
+COMPLETE — APPROVED AND FORMALLY CLOSED
+All required CI gates are represented, backend and frontend command parity passed, the frontend Jest gap was closed, Docker orchestration logic was validated, the live Docker limitation was accurately documented, repository scope remained controlled, and no unresolved Step 11 blocker remained after the Step 11.8 closure audit.
 Immediate next action
-Step 11 — CI Foundation is the next Phase 0 implementation step.
-No Step 11 implementation has been started in this progress update
+Step 12 — Clean-Machine Bootstrap is the next Phase 0 implementation step.
+Its approved scope includes:
+- scripts/bootstrap.sh
+- scripts/bootstrap.ps1
+- prerequisite verification
+- dependency installation
+- core Docker startup
+- migrations
+- health verification
+- lint/tests as defined by the Phase 0 plan
+Step 12 is not the final Phase 0 task.
+After Step 12, Step 13 — Freeze Phase 0 Definition of Done remains before Phase 0 can be considered fully frozen and ready for the next implementation phase.
