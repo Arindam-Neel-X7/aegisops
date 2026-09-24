@@ -1,8 +1,8 @@
 AegisOps Implementation Progress
 Last updated: 2026-09-24
-Current phase: 0 - Foundation
-Current step: 13 - Freeze Phase 0 Definition of Done ✅
-Status: Phase 0 is complete, approved, and frozen. Steps 1–13 are complete. Step 13 verified the full Phase 0 Definition of Done, confirmed zero unresolved blockers, preserved all documented non-blocking limitations, and established the accepted frozen engineering baseline for the next implementation phase.
+Current phase: 1 - Distributed System Simulator
+Current step: 1.10 - Integration / Regression / Research / Closure Audit ✅
+Status: Phase 1 is complete, approved, and frozen. Steps 1.1–1.10 are complete. The deterministic distributed-system simulator, safe fault injection, synthetic telemetry, research ground truth, scenario lifecycle, reset, and reproducibility baseline all passed final closure audit with 194/194 backend tests passing.
 Verified completed work
 Step 1 - Monorepo scaffold and conventions
 The repository has the planned top-level backend, frontend, infrastructure,
@@ -1819,3 +1819,305 @@ The frozen Phase 0 foundation is now the accepted engineering baseline for the n
 Immediate next action
 The project is now ready to plan the next implementation phase from the frozen Phase 0 baseline.
 Do not retroactively modify Phase 0 contracts without explicit change control.
+Phase 1 — Distributed System Simulator
+Status: COMPLETE — APPROVED — FROZEN
+Phase 1 converted the frozen Phase 0 simulator contracts into a safe, deterministic, research-grade distributed-system simulator. All Steps 1.1–1.10 are complete and independently reviewed.
+PHASE 1 — DISTRIBUTED SIMULATOR
+COMPLETE — APPROVED — FROZEN
+Phase 1 objective achieved
+Phase 1 now provides:
+- canonical seven-service distributed topology
+- deterministic seeded workload generation
+- safe in-memory fault injection
+- eight versioned research scenarios
+- canonical synthetic metric/log/system telemetry
+- virtual-time scenario execution
+- activation, observation, recovery, and reset semantics
+- canonical fault ground truth and run-level research truth
+- deterministic replay normalization
+- clean adapter boundaries for Phase 2 telemetry transport
+No physical CPU, memory, network, process, container, or production faulting is performed.
+Phase 1 execution history
+Step 1.1 — Existing Contract & Boundary Audit
+Status: COMPLETE — APPROVED — FROZEN
+Established the exact Phase 1 implementation boundary against frozen Phase 0 simulator, telemetry, and research contracts. Reused the six-member FaultType taxonomy. Traffic surge remained a workload condition; bad deployment/config remained an existing error primitive plus system marker. Kafka, ML, correlation, RCA, RAG/agents, remediation, UI, and production infrastructure were excluded.
+Step 1.2 — Runtime Architecture & Determinism Contract
+Status: COMPLETE — APPROVED — FROZEN
+Froze the deterministic stepped discrete-time execution model, explicit seed/start-time rules, deterministic child RNGs, execution-specific run_id, deterministic reproducibility_key, static topology vs mutable runtime state separation, synchronous deterministic mutation, and total reset requirements.
+Step 1.3 — Canonical Distributed Service Topology
+Status: COMPLETE — APPROVED — FROZEN
+Canonical topology version: 1.0.0.
+Services:
+- client
+- api-gateway
+- order-service
+- payment-service
+- inventory-service
+- notification-service
+- database
+Dependencies:
+client -> api-gateway
+api-gateway -> order-service
+order-service -> payment-service
+order-service -> inventory-service
+order-service -> notification-service
+payment-service -> database
+inventory-service -> database
+Deterministic UUIDv5 identities are used.
+Focused suite: 13 passed.
+Step 1.4 — Deterministic Workload Generator
+Status: COMPLETE — APPROVED — FROZEN
+Implemented healthy_baseline and traffic_surge workload profiles with deterministic child seeds, request/trace IDs, per-tick request generation, fractional credit, deterministic jitter, and half-open surge timing.
+Focused suite: 20 passed.
+Step 1.5 — Simulator Telemetry Generation Adapter
+Status: COMPLETE — APPROVED — FROZEN
+Implemented the in-memory canonical telemetry boundary. Each synthetic request emits exactly:
+1. request-count metric
+2. duration metric
+3. structured access log
+Deterministic event IDs/timestamps, trace correlation, emission order, and generic SYSTEM markers are preserved. Kafka remains outside Phase 1.
+Focused suite: 14 passed.
+Step 1.6 — Concrete Fault Injection Engine
+Status: COMPLETE — APPROVED — FROZEN
+Implemented safe simulated runtime state and concrete injection/recovery/reset for:
+- latency
+- error
+- timeout
+- crash
+- resource
+- network
+Recovery restores the exact pre-fault state. No host stress, real connection flooding, network manipulation, process termination, or sleep-based latency is used.
+Focused suite: 22 passed.
+Step 1.7 — Initial Fault Scenario Catalogue
+Status: COMPLETE — APPROVED — FROZEN
+Eight canonical scenarios:
+1. cpu-saturation
+2. memory-exhaustion
+3. connection-exhaustion
+4. dependency-latency
+5. dependency-failure
+6. error-rate-spike
+7. traffic-surge
+8. bad-deployment-config
+Shared timeline:
+baseline        [0, 10)
+activation      t = 10
+observation     [10, 20)
+recovery/end    t = 20
+post-recovery   [20, 30)
+total duration  30 seconds
+Primary active-state semantics:
+Scenario	Target / Focus	Primitive / Condition	Active Value
+CPU saturation	order-service	RESOURCE / CPU	95%
+Memory exhaustion	notification-service	RESOURCE / memory	95%
+Connection exhaustion	database	RESOURCE / connection	100% pool usage
+Dependency latency	payment-service	LATENCY	+150 ms
+Dependency failure	database	NETWORK	unreachable
+Error-rate spike	order-service	ERROR	0.45
+Traffic surge	ingress / api-gateway	workload condition	50 RPS vs 10 RPS baseline
+Bad deployment/config	order-service	ERROR + marker	0.35
+
+
+Deep catalogue isolation prevents caller mutation of authoritative scenario definitions.
+Focused suite: 25 passed.
+Step 1.8 — Ground-Truth Generation & Research Integration
+Status: COMPLETE — APPROVED — FROZEN
+Implemented:
+- ResearchRunContext
+- GroundTruthBuilder
+- ScenarioRunTruth
+- deterministic reproducibility key
+- deterministic ground-truth UUIDv5 record IDs
+Fault ground truth is produced only after an accepted matching injection. The builder validates workload identity, reproducibility identity, target mapping, affected services, and injection timing.
+Traffic surge correctly produces zero GroundTruthRecords while retaining ScenarioRunTruth. Bad deployment/config produces one ERROR ground-truth record plus deployment context.
+Focused suite: 17 passed.
+Step 1.9 — Scenario Runner / Recovery / Reset / Determinism Verification
+Status: COMPLETE — APPROVED — FROZEN
+Implemented:
+- SimulationClock
+- SimulationEngine
+- ScenarioRunner
+- runtime observability
+- ScenarioRunResult
+- normalized result comparison
+Lifecycle:
+initialize
+-> baseline
+-> activate
+-> observe
+-> recover/end
+-> post-recovery
+-> finalize detached evidence
+-> reset
+Tick order:
+1. lifecycle boundary
+2. lifecycle/system marker
+3. workload + request telemetry
+4. runtime-state telemetry
+5. virtual-time advance
+Runtime state metrics include synthetic CPU, memory, connection usage, effective latency, error/timeout rate, reachability, availability, and crash state.
+Lifecycle markers include:
+- scenario_started
+- scenario_completed
+- fault_injected
+- fault_recovered
+- traffic_surge_started
+- traffic_surge_ended
+- deployment_changed
+Reset was proven after success, rejected injection, rejected recovery, and controlled execution failure. Same-config/same-seed runs normalize identically despite different run IDs or start times. Different seeds produce deterministic variation.
+Focused suite: 28 passed.
+Step 1.10 — Integration / Regression / Research / Closure Audit
+Status: COMPLETE — APPROVED — FROZEN
+Step 1.10 was strictly read-only. Implementation changes made: NONE.
+The closure audit confirmed:
+- all Phase 1 artifacts present
+- frozen Phase 0 and Phase 1 contracts intact
+- all 18 Phase 1 DoD items passed
+- all eight scenarios execute and are observable
+- recovery/end and reset behavior correct
+- same-seed determinism proven
+- research truth reproducible and traceable
+- research schemas unchanged
+- host safety clean
+- no Phase 2+ runtime leakage
+- repository hygiene controlled
+- no unresolved blocker
+Final scenario evidence
+Scenario	Active-window evidence	Post-recovery/end evidence	Fault records	Reset	Repeat
+CPU saturation	CPU 95%	15% baseline	1	PASS	PASS
+Memory exhaustion	memory 95%	25% baseline	1	PASS	PASS
+Connection exhaustion	pool usage 100	5 baseline	1	PASS	PASS
+Dependency latency	+150 ms	0 ms	1	PASS	PASS
+Dependency failure	unreachable	reachable	1	PASS	PASS
+Error-rate spike	error rate 0.45	0.0	1	PASS	PASS
+Traffic surge	50 req/tick	10 req/tick	0	PASS	PASS
+Bad deployment/config	deployment marker + 0.35 error rate	0.0	1	PASS	PASS
+
+
+Final Phase 1 quality evidence
+Ruff                  PASS
+mypy app              PASS
+mypy app tests        PASS
+pytest -q             194 passed, 0 failed
+pytest -v             194 passed, 0 failed
+Expected total        194
+Observed total        194
+Focused frozen suites:
+Suite	Passed	Failed
+Simulator interfaces	38	0
+Topology	13	0
+Workload	20	0
+Telemetry	14	0
+Faults	22	0
+Scenarios	25	0
+Ground truth	17	0
+Runner	28	0
+
+
+Research integrity result
+Phase 1 preserves:
+- scenario ID/version
+- explicit selected seed
+- topology version
+- workload configuration/identity
+- fault ID/type/target/parameters
+- activation/injection timing
+- expected affected services
+- expected root cause
+- expected symptoms
+- recovery condition
+- run provenance
+- deterministic reproducibility key
+- normalized output evidence
+Known truth remains separate from ML predictions, anomaly/correlation/RCA results, evaluation metrics, MTTD/MTTR, and remediation outcomes.
+Host-safety result
+No executable mechanism exists for real CPU saturation, memory exhaustion, connection flooding, sleep-based latency, firewall/routing manipulation, process termination, container termination, or production-system manipulation.
+HOST SAFETY — PASS
+Phase 2+ scope-leakage result
+No runtime implementation was introduced for Kafka transport, VictoriaMetrics, OpenSearch, Neo4j runtime storage, Milvus, ML, incident correlation, RCA, RAG/LLM, LangGraph, risk/HITL, remediation, product UI, Temporal, or production infrastructure.
+PHASE 2+ SCOPE LEAKAGE — NONE
+Phase 1 repository state at closure
+branch: master
+latest commit: 88ec077 docs: finalize Phase 0 Step 13 and freeze Foundation baseline
+tracked modified: 0
+untracked: 14 approved Phase 1 items
+staged: 0
+unrelated: 0
+The 14 untracked entries are exclusively approved Phase 1 simulator packages/tests. They remain intentionally untracked because staging, committing, and pushing were prohibited throughout the isolated Phase 1 workflow.
+Step 1.10 itself made no repository mutation.
+Phase 1 Definition of Done
+All 18 closure items passed:
+1. canonical topology — PASS
+2. deterministic healthy workload — PASS
+3. concrete FaultInjector — PASS
+4. canonical Phase 1 TelemetryEmitter — PASS
+5. eight versioned scenarios — PASS
+6. explicit config and seed — PASS
+7. canonical research truth — PASS
+8. observable simulated fault evidence — PASS
+9. fault recovery/removal — PASS
+10. clean simulator reset — PASS
+11. same-config/same-seed normalized reproducibility — PASS
+12. no real host/production fault — PASS
+13. no Phase 2+ runtime leakage — PASS
+14. Phase 0 regression gates — PASS
+15. scenario regression suite — PASS
+16. reproducible and traceable research evidence — PASS
+17. controlled repository scope — PASS
+18. no unresolved blocker — PASS
+Closure blocker count: 0
+Phase 1 freeze boundaries
+The Phase 1 freeze establishes Steps 1.1–1.10 as the accepted Distributed Simulator baseline.
+Frozen means:
+- Phase 1 simulator and research contracts are accepted.
+- Topology, workload, faults, scenarios, telemetry, ground truth, clock, runner, reset, and normalization semantics are the baseline for later phases.
+- Changes require explicit change control and review.
+- Future phases must not silently rewrite frozen semantics.
+- Scenario/config changes must remain versioned and traceable.
+Future evolution is allowed only through deliberate, documented, reviewed change control.
+Phase 1 final acceptance checklist
+- Steps 1.1–1.10 complete — YES
+- final closure audit complete — YES
+- all expected artifacts present — YES
+- frozen Phase 0 contracts intact — YES
+- frozen Phase 1 contracts intact — YES
+- all eight scenarios execute — YES
+- all eight scenarios observable — YES
+- all seven fault scenarios recover — YES
+- traffic surge ends without fake faulting — YES
+- canonical research truth generated — YES
+- reset after success proven — YES
+- reset after failure proven — YES
+- same-seed replay proven — YES
+- different-seed variation proven — YES
+- event ordering deterministic — YES
+- event times simulation-derived — YES
+- research schemas intact — YES
+- host safety clean — YES
+- Phase 2+ leakage absent — YES
+- repository hygiene clean — YES
+- Ruff passed — YES
+- mypy passed — YES
+- full backend regression 194/194 — YES
+- unresolved blockers — NONE
+Phase 1 Final Status
+PHASE 1 — DISTRIBUTED SIMULATOR
+COMPLETE — APPROVED — FROZEN
+Current project baseline after Phase 1
+PHASE 0 — FOUNDATION
+COMPLETE — APPROVED — FROZEN
+
+PHASE 1 — DISTRIBUTED SIMULATOR
+COMPLETE — APPROVED — FROZEN
+The project now has a reproducible engineering foundation plus a deterministic simulator/research baseline suitable for the next Version 1 implementation phase.
+Immediate next action
+The next eligible implementation phase identified by the frozen Phase 1 plan is:
+Phase 2 — Telemetry Pipeline
+Expected Phase 2 scope includes:
+- metrics/log adapters
+- Kafka topics/transport
+- persistence/query adapters
+- preservation of canonical event identifiers and timestamps
+- transport of Phase 1 synthetic telemetry without changing frozen simulator semantics
+Phase 2 implementation is not authorized by this progress record. A dedicated Phase 2 plan/task must be explicitly reviewed and authorized before implementation begins.
+Do not retroactively modify frozen Phase 0 or Phase 1 contracts without explicit change control.
