@@ -63,6 +63,41 @@ services:
       retries: 5
       start_period: 30s
 
+  kafka-init:
+    image: apache/kafka:3.7.0
+    container_name: aegisops-kafka-init
+    profiles:
+      - messaging
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "Provisioning AegisOps canonical Kafka topics..."
+        TOPICS=(
+          "aegis.telemetry.metrics"
+          "aegis.telemetry.logs"
+          "aegis.system.events"
+          "aegis.ml.anomalies"
+          "aegis.incidents"
+          "aegis.agent.events"
+        )
+        for topic in "$${TOPICS[@]}"; do
+          echo "Creating topic: $$topic"
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic "$$topic" --partitions 1 --replication-factor 1 --config message.timestamp.type=CreateTime
+        done
+        echo "Validating canonical topics..."
+        EXISTING_TOPICS=$$(/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list)
+        for topic in "$${TOPICS[@]}"; do
+          if ! echo "$$EXISTING_TOPICS" | grep -qx "$$topic"; then
+            echo "ERROR: Topic $$topic is missing!" >&2
+            exit 1
+          fi
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --describe --topic "$$topic"
+        done
+        echo "All 6 canonical Kafka topics provisioned and verified successfully."
+
   minio:
     image: quay.io/minio/minio:RELEASE.2024-04-18T19-09-19Z
     container_name: aegisops-minio
