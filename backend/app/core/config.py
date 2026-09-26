@@ -47,5 +47,7 @@ class Settings(BaseSettings):
 
     # Kafka
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_CLIENT_ID: str = "aegisops-telemetry-producer"
+    KAFKA_REQUEST_TIMEOUT_MS: int = 5000
 
 settings = Settings()
