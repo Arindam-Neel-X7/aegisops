@@ -16,3 +16,23 @@ class VictoriaMetricsRetryExhaustedError(VictoriaMetricsPersistenceError):
 
 class VictoriaMetricsConfigurationError(TelemetryPersistenceError):
     """Raised when VictoriaMetrics adapter configuration or connection settings are invalid."""
+
+
+class InvalidEvidenceEventError(TelemetryPersistenceError):
+    """Raised when an evidence event is invalid or not allowed for OpenSearch persistence."""
+
+
+class OpenSearchPersistenceError(TelemetryPersistenceError):
+    """Raised when OpenSearch HTTP document indexing fails."""
+
+
+class OpenSearchRetryExhaustedError(OpenSearchPersistenceError):
+    """Raised when transient OpenSearch HTTP indexing failures exhaust retry attempts."""
+
+
+class OpenSearchConfigurationError(TelemetryPersistenceError):
+    """Raised when OpenSearch connection or cluster configuration is invalid."""
+
+
+class EvidenceIndexBootstrapError(TelemetryPersistenceError):
+    """Raised when bootstrapping index templates, concrete indices, or aliases fails."""

@@ -57,4 +57,10 @@ class Settings(BaseSettings):
     VICTORIAMETRICS_TIMEOUT_SECONDS: float = 5.0
     TELEMETRY_PERSISTENCE_RETRY_MAX_ATTEMPTS: int = 3
 
+    # OpenSearch
+    OPENSEARCH_URL: str = "http://localhost:9200"
+    OPENSEARCH_USER: Optional[str] = None
+    OPENSEARCH_PASSWORD: Optional[str] = None
+    OPENSEARCH_TIMEOUT_SECONDS: float = 5.0
+
 settings = Settings()

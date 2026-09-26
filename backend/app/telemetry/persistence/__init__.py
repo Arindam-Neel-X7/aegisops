@@ -1,5 +1,10 @@
 from app.telemetry.persistence.errors import (
+    EvidenceIndexBootstrapError,
+    InvalidEvidenceEventError,
     InvalidMetricError,
+    OpenSearchConfigurationError,
+    OpenSearchPersistenceError,
+    OpenSearchRetryExhaustedError,
     TelemetryPersistenceError,
     VictoriaMetricsConfigurationError,
     VictoriaMetricsPersistenceError,
@@ -11,6 +16,16 @@ from app.telemetry.persistence.metrics import (
     check_victoriametrics_health,
     extract_metric_data,
 )
+from app.telemetry.persistence.search import (
+    CONCRETE_INDEX_V1,
+    EVIDENCE_ALIAS,
+    EVIDENCE_INDEX_TEMPLATE,
+    TEMPLATE_NAME,
+    EvidencePersistenceResult,
+    OpenSearchPersistenceAdapter,
+    build_evidence_document,
+    check_opensearch_health,
+)
 
 __all__ = [
     "TelemetryPersistenceError",
@@ -18,8 +33,21 @@ __all__ = [
     "VictoriaMetricsPersistenceError",
     "VictoriaMetricsRetryExhaustedError",
     "VictoriaMetricsConfigurationError",
+    "InvalidEvidenceEventError",
+    "OpenSearchPersistenceError",
+    "OpenSearchRetryExhaustedError",
+    "OpenSearchConfigurationError",
+    "EvidenceIndexBootstrapError",
     "MetricPersistenceResult",
     "VictoriaMetricsPersistenceAdapter",
     "check_victoriametrics_health",
     "extract_metric_data",
+    "TEMPLATE_NAME",
+    "CONCRETE_INDEX_V1",
+    "EVIDENCE_ALIAS",
+    "EVIDENCE_INDEX_TEMPLATE",
+    "EvidencePersistenceResult",
+    "OpenSearchPersistenceAdapter",
+    "build_evidence_document",
+    "check_opensearch_health",
 ]
