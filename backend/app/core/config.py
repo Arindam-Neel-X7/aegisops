@@ -52,4 +52,9 @@ class Settings(BaseSettings):
     KAFKA_METRICS_CONSUMER_GROUP: str = "aegis-metrics-consumer-group-v1"
     KAFKA_EVIDENCE_CONSUMER_GROUP: str = "aegis-evidence-consumer-group-v1"
 
+    # VictoriaMetrics
+    VICTORIAMETRICS_URL: str = "http://localhost:8428"
+    VICTORIAMETRICS_TIMEOUT_SECONDS: float = 5.0
+    TELEMETRY_PERSISTENCE_RETRY_MAX_ATTEMPTS: int = 3
+
 settings = Settings()
