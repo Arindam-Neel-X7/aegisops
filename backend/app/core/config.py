@@ -49,5 +49,7 @@ class Settings(BaseSettings):
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
     KAFKA_CLIENT_ID: str = "aegisops-telemetry-producer"
     KAFKA_REQUEST_TIMEOUT_MS: int = 5000
+    KAFKA_METRICS_CONSUMER_GROUP: str = "aegis-metrics-consumer-group-v1"
+    KAFKA_EVIDENCE_CONSUMER_GROUP: str = "aegis-evidence-consumer-group-v1"
 
 settings = Settings()
