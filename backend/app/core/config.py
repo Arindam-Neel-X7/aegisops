@@ -63,4 +63,8 @@ class Settings(BaseSettings):
     OPENSEARCH_PASSWORD: Optional[str] = None
     OPENSEARCH_TIMEOUT_SECONDS: float = 5.0
 
+    # Telemetry Reliability & Observability
+    TELEMETRY_QUARANTINE_PATH: str = ".aegis/quarantine/failed_events.jsonl"
+    TELEMETRY_OBSERVABILITY_SAMPLE_WINDOW: int = 1000
+
 settings = Settings()

@@ -10,6 +10,14 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 import structlog
 
 from app.core.config import settings
+from app.telemetry.reliability.metrics import pipeline_metrics
+from app.telemetry.reliability.quarantine import (
+    QuarantineRecord,
+    QuarantineSink,
+    encode_bytes,
+    encode_headers,
+    sanitize_failure_message,
+)
 from app.telemetry.schemas import EventType, TelemetryEvent
 from app.telemetry.topics import EVENT_TYPE_TO_TOPIC, KafkaTopic
 from app.telemetry.transport.errors import (
@@ -156,6 +164,7 @@ class TelemetryConsumer:
         request_timeout_ms: int = settings.KAFKA_REQUEST_TIMEOUT_MS,
         auto_offset_reset: str = "earliest",
         client_id: str | None = None,
+        quarantine_sink: QuarantineSink | None = None,
         consumer_factory: Callable[..., aiokafka.AIOKafkaConsumer] | None = None,
     ) -> None:
         self.topics = list(topics)
@@ -167,6 +176,7 @@ class TelemetryConsumer:
         self.request_timeout_ms = request_timeout_ms
         self.auto_offset_reset = auto_offset_reset
         self.client_id = client_id
+        self._quarantine_sink = quarantine_sink
         self._consumer_factory = consumer_factory
 
         self._consumer: aiokafka.AIOKafkaConsumer | None = None
@@ -223,40 +233,98 @@ class TelemetryConsumer:
                 group_id=self.group_id,
             )
 
-    async def process_record(self, record: Any) -> TelemetryEnvelope:
-        """Validate, deserialize, route, handle, and commit a single Kafka record."""
+    async def process_record(self, record: Any) -> Any:
+        """Validate, deserialize, route, handle, and commit a single Kafka record.
+
+        Failure contract:
+        - Validation or persistence failure with configured QuarantineSink:
+          quarantines exact original Kafka record, then commits offset + 1, and returns QuarantineRecord.
+        - Quarantine failure: raises QuarantineWriteError and does NOT commit offset.
+        - Without configured QuarantineSink: raises typed exception and does NOT commit offset.
+        """
         if not self._started or self._closed or self._consumer is None:
             raise ConsumerNotStartedError("Consumer is not started or has been closed")
 
-        try:
-            event = deserialize_event(record.value)
-        except TelemetryDeserializationError as exc:
-            raise ConsumerRecordValidationError(
-                f"Failed to deserialize record on topic '{record.topic}' offset {record.offset}: {exc}"
-            ) from exc
-
-        context, producer_version = parse_kafka_headers(record.headers)
-
-        expected_topic = EVENT_TYPE_TO_TOPIC[event.event_type].value
-        if record.topic != expected_topic:
-            raise TopicEventTypeMismatchError(
-                f"Record topic '{record.topic}' does not match expected topic '{expected_topic}' "
-                f"for event_type '{event.event_type}'"
-            )
-
-        if event.event_type not in self.allowed_event_types:
-            raise TopicEventTypeMismatchError(
-                f"Event type '{event.event_type}' is not allowed for {self.__class__.__name__} "
-                f"(allowed: {[e.value for e in self.allowed_event_types]})"
-            )
-
-        if record.topic not in self.allowed_topics:
-            raise TopicEventTypeMismatchError(
-                f"Topic '{record.topic}' is not allowed for {self.__class__.__name__} "
-                f"(allowed: {self.allowed_topics})"
-            )
-
+        raw_val_b64 = encode_bytes(record.value) or ""
+        raw_key_b64 = encode_bytes(record.key)
+        headers_models = encode_headers(record.headers)
         kafka_timestamp_ms = record.timestamp if record.timestamp is not None else 0
+
+        # Phase 1: Validation & Envelope Construction
+        validation_error: Exception | None = None
+        failure_stage = "deserialization"
+        event: TelemetryEvent | None = None
+        context: TelemetryExecutionContext | None = None
+        producer_version: str | None = None
+
+        try:
+            try:
+                event = deserialize_event(record.value)
+            except TelemetryDeserializationError as exc:
+                failure_stage = "deserialization"
+                raise ConsumerRecordValidationError(
+                    f"Failed to deserialize record on topic '{record.topic}' offset {record.offset}: {exc}"
+                ) from exc
+
+            failure_stage = "header_validation"
+            context, producer_version = parse_kafka_headers(record.headers)
+
+            failure_stage = "routing_validation"
+            expected_topic = EVENT_TYPE_TO_TOPIC[event.event_type].value
+            if record.topic != expected_topic:
+                raise TopicEventTypeMismatchError(
+                    f"Record topic '{record.topic}' does not match expected topic '{expected_topic}' "
+                    f"for event_type '{event.event_type}'"
+                )
+
+            if event.event_type not in self.allowed_event_types:
+                raise TopicEventTypeMismatchError(
+                    f"Event type '{event.event_type}' is not allowed for {self.__class__.__name__} "
+                    f"(allowed: {[e.value for e in self.allowed_event_types]})"
+                )
+
+            if record.topic not in self.allowed_topics:
+                raise TopicEventTypeMismatchError(
+                    f"Topic '{record.topic}' is not allowed for {self.__class__.__name__} "
+                    f"(allowed: {self.allowed_topics})"
+                )
+
+        except Exception as exc:
+            validation_error = exc
+
+        if validation_error is not None:
+            if self._quarantine_sink is not None:
+                q_record = QuarantineRecord(
+                    failure_stage=failure_stage,
+                    failure_type=validation_error.__class__.__name__,
+                    failure_message_sanitized=sanitize_failure_message(str(validation_error)),
+                    topic=record.topic,
+                    partition=record.partition,
+                    offset=record.offset,
+                    kafka_timestamp_ms=kafka_timestamp_ms,
+                    raw_key_base64=raw_key_b64,
+                    raw_value_base64=raw_val_b64,
+                    headers=headers_models,
+                    consumer_group=self.group_id,
+                    event_id=event.event_id if event else None,
+                    run_id=context.run_id if context else None,
+                    scenario_id=context.scenario_id if context else None,
+                    service=event.service if event else None,
+                    event_type=event.event_type.value if event else None,
+                )
+                await self._quarantine_sink.quarantine(q_record)
+                pipeline_metrics.record_quarantine(failure_stage)
+
+                tp = TopicPartition(record.topic, record.partition)
+                await self._consumer.commit({tp: record.offset + 1})
+                return q_record
+
+            pipeline_metrics.record_failure(failure_stage)
+            raise validation_error
+
+        assert event is not None and context is not None
+
+        # Phase 2: Envelope Construction & Handler Execution
         envelope = TelemetryEnvelope(
             event=event,
             context=context,
@@ -269,6 +337,7 @@ class TelemetryConsumer:
             producer_version=producer_version,
         )
 
+        handler_error: Exception | None = None
         try:
             if hasattr(self._handler, "handle") and callable(getattr(self._handler, "handle")) and not callable(self._handler):
                 handle_res: Any = self._handler.handle(envelope)
@@ -286,13 +355,45 @@ class TelemetryConsumer:
                 raise ConsumerHandlerError(
                     f"Handler {self._handler} is neither callable nor implements handle()"
                 )
-        except ConsumerHandlerError:
-            raise
+        except ConsumerHandlerError as exc:
+            handler_error = exc
         except Exception as exc:
-            raise ConsumerHandlerError(
+            handler_error = ConsumerHandlerError(
                 f"Downstream handler failed for event {event.event_id} at offset {record.offset}: {exc}"
-            ) from exc
+            )
+            handler_error.__cause__ = exc
 
+        if handler_error is not None:
+            if self._quarantine_sink is not None:
+                q_record = QuarantineRecord(
+                    failure_stage="persistence",
+                    failure_type=handler_error.__class__.__name__,
+                    failure_message_sanitized=sanitize_failure_message(str(handler_error)),
+                    topic=record.topic,
+                    partition=record.partition,
+                    offset=record.offset,
+                    kafka_timestamp_ms=kafka_timestamp_ms,
+                    raw_key_base64=raw_key_b64,
+                    raw_value_base64=raw_val_b64,
+                    headers=headers_models,
+                    consumer_group=self.group_id,
+                    event_id=event.event_id,
+                    run_id=context.run_id,
+                    scenario_id=context.scenario_id,
+                    service=event.service,
+                    event_type=event.event_type.value,
+                )
+                await self._quarantine_sink.quarantine(q_record)
+                pipeline_metrics.record_quarantine("persistence")
+
+                tp = TopicPartition(record.topic, record.partition)
+                await self._consumer.commit({tp: record.offset + 1})
+                return q_record
+
+            pipeline_metrics.record_failure("persistence")
+            raise handler_error
+
+        # Phase 3: Success Commit & Observability
         tp = TopicPartition(record.topic, record.partition)
         await self._consumer.commit({tp: record.offset + 1})
 
@@ -309,7 +410,7 @@ class TelemetryConsumer:
 
         return envelope
 
-    async def consume_one(self, timeout_ms: int = 1000) -> TelemetryEnvelope | None:
+    async def consume_one(self, timeout_ms: int = 1000) -> Any:
         """Consume and process a single record within the given timeout in milliseconds."""
         if not self._started or self._closed or self._consumer is None:
             raise ConsumerNotStartedError("Consumer is not started or has been closed")
@@ -372,6 +473,7 @@ class MetricsConsumer(TelemetryConsumer):
         request_timeout_ms: int = settings.KAFKA_REQUEST_TIMEOUT_MS,
         auto_offset_reset: str = "earliest",
         client_id: str | None = None,
+        quarantine_sink: QuarantineSink | None = None,
         consumer_factory: Callable[..., aiokafka.AIOKafkaConsumer] | None = None,
     ) -> None:
         super().__init__(
@@ -384,6 +486,7 @@ class MetricsConsumer(TelemetryConsumer):
             request_timeout_ms=request_timeout_ms,
             auto_offset_reset=auto_offset_reset,
             client_id=client_id,
+            quarantine_sink=quarantine_sink,
             consumer_factory=consumer_factory,
         )
 
@@ -399,6 +502,7 @@ class EvidenceConsumer(TelemetryConsumer):
         request_timeout_ms: int = settings.KAFKA_REQUEST_TIMEOUT_MS,
         auto_offset_reset: str = "earliest",
         client_id: str | None = None,
+        quarantine_sink: QuarantineSink | None = None,
         consumer_factory: Callable[..., aiokafka.AIOKafkaConsumer] | None = None,
     ) -> None:
         super().__init__(
@@ -411,5 +515,6 @@ class EvidenceConsumer(TelemetryConsumer):
             request_timeout_ms=request_timeout_ms,
             auto_offset_reset=auto_offset_reset,
             client_id=client_id,
+            quarantine_sink=quarantine_sink,
             consumer_factory=consumer_factory,
         )

@@ -57,6 +57,18 @@ def create_app() -> FastAPI:
             return JSONResponse(status_code=503, content={"status": "not_ready"})
         return {"status": "ready"}
 
+    @app.get("/ready/telemetry", tags=["telemetry", "health"])
+    async def telemetry_readiness_check():
+        from .telemetry.reliability.readiness import check_telemetry_readiness
+        is_ready, data = await check_telemetry_readiness()
+        status_code = 200 if is_ready else 503
+        return JSONResponse(status_code=status_code, content=data)
+
+    @app.get("/telemetry/metrics", tags=["telemetry", "observability"])
+    async def telemetry_metrics():
+        from .telemetry.reliability.metrics import pipeline_metrics
+        return pipeline_metrics.snapshot().model_dump(mode="json")
+
     # Global exception handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
