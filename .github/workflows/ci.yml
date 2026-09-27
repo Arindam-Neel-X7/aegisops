@@ -222,6 +222,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: aegisops
+          POSTGRES_PASSWORD: aegisops
+          POSTGRES_DB: aegisops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aegisops -d aegisops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://aegisops:aegisops@localhost:5432/aegisops
+
     defaults:
       run:
         working-directory: backend
