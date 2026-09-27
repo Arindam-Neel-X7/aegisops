@@ -29,6 +29,8 @@ from app.telemetry.transport.serialization import (
     TelemetryExecutionContext,
 )
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.asyncio
 async def test_real_opensearch_bootstrap_and_mapping() -> None:

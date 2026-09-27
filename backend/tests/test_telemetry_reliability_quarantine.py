@@ -1,6 +1,7 @@
 import asyncio
 from pathlib import Path
 import tempfile
+from typing import Any
 import uuid
 
 import pytest
@@ -137,10 +138,8 @@ async def test_file_quarantine_sink_concurrent_writes_atomicity() -> None:
 
 
 @pytest.mark.asyncio
-async def test_file_quarantine_sink_malformed_path_raises_quarantine_write_error() -> None:
-    # Intentionally invalid path on Windows
-    invalid_path = Path("Z:\\non_existent_drive_123\\quarantine.jsonl")
-    sink = FileQuarantineSink(file_path=invalid_path)
+async def test_file_quarantine_sink_malformed_path_raises_quarantine_write_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    sink = FileQuarantineSink(file_path="dummy_path.jsonl")
     rec = QuarantineRecord(
         failure_stage="deserialization",
         failure_type="Error",
@@ -151,7 +150,12 @@ async def test_file_quarantine_sink_malformed_path_raises_quarantine_write_error
         kafka_timestamp_ms=1000,
         raw_value_base64="YQ==",
     )
-    with pytest.raises(QuarantineWriteError):
+
+    def mock_open(*args: Any, **kwargs: Any) -> Any:
+        raise OSError("Simulated disk I/O permission failure")
+
+    monkeypatch.setattr("builtins.open", mock_open)
+    with pytest.raises(QuarantineWriteError, match="Failed to append record to quarantine file"):
         await sink.quarantine(rec)
 
 

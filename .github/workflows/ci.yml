@@ -67,7 +67,7 @@ jobs:
         run: poetry run mypy app
 
       - name: pytest
-        run: poetry run pytest tests -q
+        run: poetry run pytest tests -q -m "not integration"
 
       - name: Start backend
         run: |
@@ -217,3 +217,86 @@ jobs:
       - name: Tear down core profile
         if: always()
         run: docker compose --profile core down -v --remove-orphans
+
+  telemetry-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: pipx install poetry==2.4.3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "poetry"
+          cache-dependency-path: backend/poetry.lock
+
+      - name: Install backend dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Validate Compose config
+        run: docker compose --profile messaging --profile observability config
+        working-directory: .
+
+      - name: Start telemetry infrastructure
+        run: docker compose --profile messaging --profile observability up -d kafka victoriametrics opensearch
+        working-directory: .
+
+      - name: Provision canonical Kafka topics
+        run: docker compose --profile messaging up kafka-init
+        working-directory: .
+
+      - name: Wait for telemetry service health
+        run: |
+          wait_for_health() {
+            local service="$1"
+            echo "Waiting for $service to be healthy..."
+            for i in {1..30}; do
+              local cid
+              cid=$(docker compose --profile messaging --profile observability ps -q "$service")
+              if [ -z "$cid" ]; then
+                echo "$service container not found or exited early."
+                exit 1
+              fi
+              local status
+              status=$(docker inspect --format='{{.State.Health.Status}}' "$cid" 2>/dev/null || echo "missing")
+              if [ "$status" = "healthy" ]; then
+                echo "$service is healthy."
+                return 0
+              elif [ "$status" = "unhealthy" ]; then
+                echo "$service became unhealthy."
+                exit 1
+              fi
+              sleep 2
+            done
+            echo "$service health check timed out."
+            exit 1
+          }
+          wait_for_health kafka
+          wait_for_health victoriametrics
+          wait_for_health opensearch
+        working-directory: .
+
+      - name: Run telemetry integration tests
+        run: poetry run pytest tests -q -m integration
+
+      - name: Telemetry diagnostics on failure
+        if: failure()
+        run: |
+          docker compose --profile messaging --profile observability ps
+          docker compose --profile messaging --profile observability logs --no-color --tail 50
+        working-directory: .
+
+      - name: Tear down telemetry infrastructure
+        if: always()
+        run: docker compose --profile messaging --profile observability down -v --remove-orphans
+        working-directory: .

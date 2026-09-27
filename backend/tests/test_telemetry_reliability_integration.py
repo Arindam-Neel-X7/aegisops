@@ -48,6 +48,8 @@ from app.telemetry.transport.serialization import (
     serialize_event,
 )
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.asyncio
 async def test_real_quarantine_malformed_record() -> None:
@@ -89,7 +91,7 @@ async def test_real_quarantine_malformed_record() -> None:
         try:
             tp = TopicPartition(topic, metadata.partition)
             outcome = None
-            for _ in range(50):
+            for _ in range(100):
                 res = await consumer.consume_one(timeout_ms=1000)
                 if isinstance(res, QuarantineRecord) and decode_bytes(res.raw_value_base64) == raw_poison_payload:
                     outcome = res
@@ -185,7 +187,7 @@ async def test_real_quarantine_persistence_failure() -> None:
         try:
             tp = TopicPartition(topic, pub_result.partition)
             outcome = None
-            for _ in range(50):
+            for _ in range(100):
                 res = await consumer.consume_one(timeout_ms=1000)
                 if isinstance(res, QuarantineRecord) and res.event_id == event_id:
                     outcome = res
@@ -359,7 +361,7 @@ async def test_real_recoverable_replay() -> None:
         await consumer.start()
         try:
             outcome = None
-            for _ in range(50):
+            for _ in range(100):
                 res = await consumer.consume_one(timeout_ms=1000)
                 if isinstance(res, TelemetryEnvelope) and res.event.event_id == event_id:
                     outcome = res
@@ -437,7 +439,7 @@ async def test_real_poison_replay_quarantines_again_without_loop() -> None:
         await consumer.start()
         try:
             outcome = None
-            for _ in range(50):
+            for _ in range(100):
                 res = await consumer.consume_one(timeout_ms=1000)
                 if isinstance(res, QuarantineRecord) and decode_bytes(res.raw_value_base64) == raw_poison:
                     outcome = res

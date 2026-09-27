@@ -1,9 +1,12 @@
 from datetime import datetime, timezone
+from pathlib import Path
+import tempfile
 import uuid
 
 from aiokafka import TopicPartition
 import pytest
 
+from app.telemetry.reliability.quarantine import FileQuarantineSink
 from app.telemetry.schemas import EventSeverity, EventType, TelemetryEvent
 from app.telemetry.topics import KafkaTopic
 from app.telemetry.transport.consumer import (
@@ -14,6 +17,8 @@ from app.telemetry.transport.consumer import (
 from app.telemetry.transport.errors import ConsumerHandlerError
 from app.telemetry.transport.producer import KafkaTelemetryProducer
 from app.telemetry.transport.serialization import TelemetryExecutionContext
+
+pytestmark = pytest.mark.integration
 
 
 class RecordingHandler:
@@ -72,48 +77,53 @@ async def test_real_metrics_consumer_integration() -> None:
         pub_result = await producer.publish(event, context)
         assert pub_result.topic == KafkaTopic.METRICS.value
 
-        handler = RecordingHandler()
-        consumer = MetricsConsumer(
-            handler=handler,
-            bootstrap_servers=bootstrap_servers,
-            group_id=group_id,
-            client_id=f"consumer-metrics-{test_id}",
-            auto_offset_reset="earliest",
-        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_q_path = Path(temp_dir) / "consumer_quarantine.jsonl"
+            sink = FileQuarantineSink(file_path=temp_q_path)
 
-        await consumer.start()
-        try:
-            # Poll for the published record
-            envelope: TelemetryEnvelope | None = None
-            for _ in range(50):
-                env = await consumer.consume_one(timeout_ms=1000)
-                if env is not None and env.event.event_id == event_id:
-                    envelope = env
-                    break
+            handler = RecordingHandler()
+            consumer = MetricsConsumer(
+                handler=handler,
+                bootstrap_servers=bootstrap_servers,
+                group_id=group_id,
+                client_id=f"consumer-metrics-{test_id}",
+                quarantine_sink=sink,
+                auto_offset_reset="earliest",
+            )
 
-            assert envelope is not None, "Failed to consume published metric event"
-            assert envelope.event.event_id == event_id
-            assert envelope.event.event_time == event_time
-            assert envelope.event.tenant_id == tenant_id
-            assert envelope.event.service == "order-service"
-            assert envelope.event.event_type == EventType.METRIC
-            assert envelope.context.run_id == run_id
-            assert envelope.context.scenario_id == f"scenario-{test_id}"
-            assert envelope.context.seed == 987654321
-            assert envelope.producer_version == "step2.4"
-            assert envelope.kafka_timestamp_ms == pub_result.timestamp_ms
-            assert envelope.topic == KafkaTopic.METRICS.value
-            assert envelope.offset == pub_result.offset
-            assert len(handler.envelopes) >= 1
+            await consumer.start()
+            try:
+                # Poll for the published record
+                envelope: TelemetryEnvelope | None = None
+                for _ in range(100):
+                    env = await consumer.consume_one(timeout_ms=1000)
+                    if isinstance(env, TelemetryEnvelope) and env.event.event_id == event_id:
+                        envelope = env
+                        break
 
-            # Verify manual offset commit on broker
-            tp = TopicPartition(pub_result.topic, pub_result.partition)
-            committed_offset = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
-            assert committed_offset is not None
-            assert committed_offset == pub_result.offset + 1
+                assert envelope is not None, "Failed to consume published metric event"
+                assert envelope.event.event_id == event_id
+                assert envelope.event.event_time == event_time
+                assert envelope.event.tenant_id == tenant_id
+                assert envelope.event.service == "order-service"
+                assert envelope.event.event_type == EventType.METRIC
+                assert envelope.context.run_id == run_id
+                assert envelope.context.scenario_id == f"scenario-{test_id}"
+                assert envelope.context.seed == 987654321
+                assert envelope.producer_version == "step2.4"
+                assert envelope.kafka_timestamp_ms == pub_result.timestamp_ms
+                assert envelope.topic == KafkaTopic.METRICS.value
+                assert envelope.offset == pub_result.offset
+                assert len(handler.envelopes) >= 1
 
-        finally:
-            await consumer.stop()
+                # Verify manual offset commit on broker
+                tp = TopicPartition(pub_result.topic, pub_result.partition)
+                committed_offset = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
+                assert committed_offset is not None
+                assert committed_offset == pub_result.offset + 1
+
+            finally:
+                await consumer.stop()
 
     finally:
         await producer.close()
@@ -194,61 +204,66 @@ async def test_real_evidence_consumer_integration() -> None:
         pub_sys = await producer.publish(sys_event, sys_context)
         assert pub_sys.topic == KafkaTopic.SYSTEM_EVENTS.value
 
-        handler = RecordingHandler()
-        consumer = EvidenceConsumer(
-            handler=handler,
-            bootstrap_servers=bootstrap_servers,
-            group_id=group_id,
-            client_id=f"consumer-evidence-{test_id}",
-            auto_offset_reset="earliest",
-        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_q_path = Path(temp_dir) / "evidence_quarantine.jsonl"
+            sink = FileQuarantineSink(file_path=temp_q_path)
 
-        assert consumer.topics == [KafkaTopic.LOGS.value, KafkaTopic.SYSTEM_EVENTS.value]
-        assert KafkaTopic.METRICS.value not in consumer.topics
+            handler = RecordingHandler()
+            consumer = EvidenceConsumer(
+                handler=handler,
+                bootstrap_servers=bootstrap_servers,
+                group_id=group_id,
+                client_id=f"consumer-evidence-{test_id}",
+                quarantine_sink=sink,
+                auto_offset_reset="earliest",
+            )
 
-        await consumer.start()
-        try:
-            consumed_log: TelemetryEnvelope | None = None
-            consumed_sys: TelemetryEnvelope | None = None
+            assert consumer.topics == [KafkaTopic.LOGS.value, KafkaTopic.SYSTEM_EVENTS.value]
+            assert KafkaTopic.METRICS.value not in consumer.topics
 
-            for _ in range(50):
-                if consumed_log is not None and consumed_sys is not None:
-                    break
-                env = await consumer.consume_one(timeout_ms=1000)
-                if env is not None:
-                    if env.event.event_id == log_event_id:
-                        consumed_log = env
-                    elif env.event.event_id == sys_event_id:
-                        consumed_sys = env
+            await consumer.start()
+            try:
+                consumed_log: TelemetryEnvelope | None = None
+                consumed_sys: TelemetryEnvelope | None = None
 
-            assert consumed_log is not None, "Failed to consume LOG event"
-            assert consumed_sys is not None, "Failed to consume SYSTEM event"
+                for _ in range(100):
+                    if consumed_log is not None and consumed_sys is not None:
+                        break
+                    env = await consumer.consume_one(timeout_ms=1000)
+                    if isinstance(env, TelemetryEnvelope):
+                        if env.event.event_id == log_event_id:
+                            consumed_log = env
+                        elif env.event.event_id == sys_event_id:
+                            consumed_sys = env
 
-            assert consumed_log.event.event_id == log_event_id
-            assert consumed_log.event.event_time == log_event_time
-            assert consumed_log.context.run_id == log_run_id
-            assert consumed_log.topic == KafkaTopic.LOGS.value
+                assert consumed_log is not None, "Failed to consume LOG event"
+                assert consumed_sys is not None, "Failed to consume SYSTEM event"
 
-            assert consumed_sys.event.event_id == sys_event_id
-            assert consumed_sys.event.event_time == sys_event_time
-            assert consumed_sys.context.run_id == sys_run_id
-            assert consumed_sys.topic == KafkaTopic.SYSTEM_EVENTS.value
+                assert consumed_log.event.event_id == log_event_id
+                assert consumed_log.event.event_time == log_event_time
+                assert consumed_log.context.run_id == log_run_id
+                assert consumed_log.topic == KafkaTopic.LOGS.value
 
-            # Verify committed offsets for both partitions
-            tp_log = TopicPartition(pub_log.topic, pub_log.partition)
-            tp_sys = TopicPartition(pub_sys.topic, pub_sys.partition)
+                assert consumed_sys.event.event_id == sys_event_id
+                assert consumed_sys.event.event_time == sys_event_time
+                assert consumed_sys.context.run_id == sys_run_id
+                assert consumed_sys.topic == KafkaTopic.SYSTEM_EVENTS.value
 
-            committed_log = await consumer._consumer.committed(tp_log)  # type: ignore[union-attr]
-            committed_sys = await consumer._consumer.committed(tp_sys)  # type: ignore[union-attr]
+                # Verify committed offsets for both partitions
+                tp_log = TopicPartition(pub_log.topic, pub_log.partition)
+                tp_sys = TopicPartition(pub_sys.topic, pub_sys.partition)
 
-            assert committed_log is not None
-            assert committed_log >= pub_log.offset + 1
+                committed_log = await consumer._consumer.committed(tp_log)  # type: ignore[union-attr]
+                committed_sys = await consumer._consumer.committed(tp_sys)  # type: ignore[union-attr]
 
-            assert committed_sys is not None
-            assert committed_sys >= pub_sys.offset + 1
+                assert committed_log is not None
+                assert committed_log >= pub_log.offset + 1
 
-        finally:
-            await consumer.stop()
+                assert committed_sys is not None
+                assert committed_sys >= pub_sys.offset + 1
+
+            finally:
+                await consumer.stop()
 
     finally:
         await producer.close()
@@ -315,6 +330,7 @@ async def test_real_handler_failure_leaves_offset_uncommitted() -> None:
         await consumer.start()
         try:
             tp = TopicPartition(pub_result.topic, pub_result.partition)
+            consumer._consumer.seek(tp, pub_result.offset)  # type: ignore[union-attr]
             initial_committed = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
 
             with pytest.raises(ConsumerHandlerError, match="Downstream handler failed"):

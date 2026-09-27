@@ -12,6 +12,8 @@ from app.telemetry.transport.serialization import (
     deserialize_event,
 )
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.asyncio
 async def test_real_kafka_producer_integration() -> None:

@@ -24,6 +24,8 @@ from app.telemetry.transport.serialization import (
     TelemetryExecutionContext,
 )
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.asyncio
 async def test_direct_victoriametrics_persistence_and_query_verification() -> None:
