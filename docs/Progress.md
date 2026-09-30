@@ -1,8 +1,8 @@
 AegisOps Implementation Progress
-Last updated: 2026-09-24
-Current phase: 1 - Distributed System Simulator
-Current step: 1.10 - Integration / Regression / Research / Closure Audit ✅
-Status: Phase 1 is complete, approved, and frozen. Steps 1.1–1.10 are complete. The deterministic distributed-system simulator, safe fault injection, synthetic telemetry, research ground truth, scenario lifecycle, reset, and reproducibility baseline all passed final closure audit with 194/194 backend tests passing.
+Last updated: 2026-09-30
+Current phase: 2 - Telemetry Pipeline
+Current step: 2.11 - Regression / Research / Phase 2 Closure Audit ✅
+Status: Phase 2 is complete, approved, and frozen. Steps 2.1 through 2.11 are complete. Phase 2 implements the detached simulator-to-telemetry bridge, live Kafka transport, VictoriaMetrics persistence for METRIC events, OpenSearch persistence for LOG and SYSTEM events, unified query adapters, exact-byte quarantine, replay, readiness, and observability contracts. All 8 canonical simulator scenarios are proven end-to-end through the real telemetry pipeline with zero terminal lag, zero healthy quarantine, and exact event-ID reconciliation. Final backend regression passed with 415 / 415 tests (379 non-integration, 36 live integration), and GitHub Actions run 36703187521 passed all four CI jobs.
 Verified completed work
 Step 1 - Monorepo scaffold and conventions
 The repository has the planned top-level backend, frontend, infrastructure,
@@ -2121,3 +2121,240 @@ Expected Phase 2 scope includes:
 - transport of Phase 1 synthetic telemetry without changing frozen simulator semantics
 Phase 2 implementation is not authorized by this progress record. A dedicated Phase 2 plan/task must be explicitly reviewed and authorized before implementation begins.
 Do not retroactively modify frozen Phase 0 or Phase 1 contracts without explicit change control.
+Phase 2 — Telemetry Pipeline
+Status: COMPLETE — APPROVED — FROZEN
+
+Phase 2 preserves the frozen Phase 1 simulator semantics while transporting completed ScenarioRunResult telemetry through real telemetry infrastructure (Apache Kafka, VictoriaMetrics, OpenSearch).
+
+Phase 2 Objective
+The objective of Phase 2 is to establish the end-to-end telemetry ingest, routing, persistence, query, reliability, and readiness foundation:
+Phase 1 canonical TelemetryEvent -> Kafka -> VictoriaMetrics for METRIC + OpenSearch for LOG/SYSTEM -> narrow query adapters -> reliability / quarantine / replay / readiness / observability -> all-eight real-scenario pipeline verification.
+
+Explicit Non-Goals (Scope Boundary):
+Phase 2 did NOT implement:
+- anomaly detection models or anomaly event streaming
+- incident creation or correlation
+- topology blast-radius processing
+- root-cause analysis (RCA)
+- Graph-RAG or historical telemetry retrieval
+- LangGraph agent reasoning or multi-agent debate
+- risk scoring or human approval workflows
+- automated remediation execution or rollback
+
+Phase 2 Execution History
+- Step 2.1 — Existing Telemetry / Runtime Audit
+  Status: COMPLETE — APPROVED — FROZEN
+  Type: READ-ONLY
+- Step 2.2 — Phase 2 Contract Design
+  Status: COMPLETE — APPROVED — FROZEN
+  Type: READ-ONLY
+- Step 2.3 — Kafka Runtime
+  Status: COMPLETE — APPROVED — FROZEN
+  Commit: 4503204f...
+- Step 2.4 — Serialization & Kafka Producer
+  Status: COMPLETE — APPROVED — FROZEN
+  Commit: 4a95b2f0d3347ece83ede8fc1114a81b6893833c
+- Step 2.5 — Consumer / Routing
+  Status: COMPLETE — APPROVED — FROZEN
+  Commit: 14ae2ca6081cd3d7467fda94f22e76adc1ca7e76
+- Step 2.6 — VictoriaMetrics Persistence
+  Status: COMPLETE — APPROVED — FROZEN
+  Commit: 1eb60c71a66057fb714150b2fa82bcbba7009165
+- Step 2.7 — OpenSearch LOG / SYSTEM Persistence
+  Status: COMPLETE — APPROVED — FROZEN
+  Commit: 21e7ad96e846fa619787ca898317d76f9986bfa2
+- Step 2.8 — Unified Query Adapters
+  Status: COMPLETE — APPROVED — FROZEN
+  Commit: e913982e00cc2d0d97139b9df3ee5ffe9d8e5f3a
+- Step 2.9 — Reliability / Readiness / Observability
+  Status: COMPLETE — APPROVED — FROZEN
+  Primary commit: a0bd326465ee3ff5937f40e38f87bd880b245502
+  CI corrections: 5de1a52c27e9e2be5a01e4c2da16fca79793419c, 466502b2de29a1c23f3a2ea4a98301b4dc1c401c
+- Step 2.10A — Detached TelemetryPipelinePublisher Bridge
+  Status: COMPLETE — APPROVED — FROZEN
+  Commit: db128d32c91504a95c2b562f186feecbf60ff01c
+- Step 2.10B — cpu-saturation Real Pipeline
+  Status: COMPLETE — APPROVED — FROZEN
+  Primary commit: e5c84e52f65c6f0d81964295b2ac6f1eb4f7d840
+  Correction commit: 5b6d0af9fc3ece1b453e1fddb698a93269bcf126
+- Step 2.10C — Remaining Seven / All-Eight Pipeline Coverage
+  Status: COMPLETE — APPROVED — FROZEN
+  Commit: c48402529a7b0b90ea0a891f188b36b77d9ba898
+- Step 2.11 — Regression / Research / Phase 2 Closure Audit
+  Status: COMPLETE — APPROVED — FROZEN
+  Type: READ-ONLY
+  Commit: NONE
+
+Detached Pipeline Architecture
+Architecture: ScenarioRunner -> completed immutable ScenarioRunResult -> TelemetryPipelinePublisher -> Kafka
+- The simulator completes execution first; publication occurs afterward.
+- Zero Kafka or persistence dependencies exist inside ScenarioRunner or the simulator runtime.
+- Phase 1 contracts remain completely unmodified.
+- ScenarioRunResult remains strictly immutable before, during, and after pipeline publication.
+
+Kafka Contract
+Canonical Topics (6):
+1. aegis.telemetry.metrics (1 partition, replication factor 1, message.timestamp.type=CreateTime)
+2. aegis.telemetry.logs (1 partition, replication factor 1, message.timestamp.type=CreateTime)
+3. aegis.system.events (1 partition, replication factor 1, message.timestamp.type=CreateTime)
+4. aegis.ml.anomalies (1 partition, replication factor 1, message.timestamp.type=CreateTime)
+5. aegis.incidents (1 partition, replication factor 1, message.timestamp.type=CreateTime)
+6. aegis.agent.events (1 partition, replication factor 1, message.timestamp.type=CreateTime)
+Runtime: Apache Kafka 3.7 (KRaft mode).
+Phase 2 ACTIVE ownership: METRIC, LOG, SYSTEM.
+Future ownership: ANOMALY (Phase 3), INCIDENT (Phase 4), AGENT (Phase 6). Future topics exist as frozen schema contracts and are not consumed by Phase 2 production consumers.
+
+Serialization & Producer Contract
+- Transport library: aiokafka 0.14.0.
+- Telemetry event serialization preserves: schema_version, event_id, event_time, tenant_id, environment, service, event_type, severity, trace_id, and arbitrary payload.
+- External TelemetryExecutionContext preserves: run_id, scenario_id, scenario_version, reproducibility_key, seed.
+- Kafka message key format: {tenant_id}:{environment}:{service}.
+- Required Kafka headers: run_id, scenario_id, scenario_version, reproducibility_key, seed.
+- Delivery semantics: at-least-once.
+
+Consumer & Routing Contract
+- MetricsConsumer: aegis.telemetry.metrics (METRIC only).
+- EvidenceConsumer: aegis.telemetry.logs and aegis.system.events (LOG and SYSTEM only).
+- Manual offset commit: occurs after successful persistence or successful quarantine.
+- Quarantine write failure: leaves offset uncommitted.
+- Reserved future topics are not consumed.
+
+VictoriaMetrics Persistence Contract
+- Version: VictoriaMetrics 1.99.0.
+- Ingestion endpoint: /api/v1/import with 1ms deduplication window (-dedup.minScrapeInterval=1ms).
+- Event type: METRIC only.
+- Query-visible labels: __name__, service, tenant_id, environment, run_id, scenario_id, seed, event_id, status_code, outcome.
+- Query adapter: MetricQueryAdapter utilizing /api/v1/query (instant) and /api/v1/query_range (range).
+
+OpenSearch Evidence Persistence Contract
+- Version: OpenSearch 2.13.0.
+- Concrete index: aegis-evidence-v1, Alias: aegis-evidence, Template: aegis-evidence-template-v1.
+- Event types: LOG and SYSTEM only.
+- Document ID: deterministic run_id:event_id identity.
+- Dynamic mapping: payload.dynamic=false (prevents mapping explosion from arbitrary payloads).
+- Seed: uint64-safe keyword string representation.
+- Query sorting: event_time ASC, event_id ASC.
+- Query adapter: EvidenceQueryAdapter utilizing /aegis-evidence/_search DSL.
+
+Query Contract
+- MetricQueryAdapter filters: metric, service, tenant, environment, run_id, seed, event_id, time / range.
+- EvidenceQueryAdapter filters: run_id, seed, time, service, event_type, severity, trace_id, event_id, marker.
+- Evidence limits: default = 100, maximum = 1000.
+- Zero cross-store joins introduced in Phase 2.
+
+Quarantine & Replay Architecture
+- Quarantine model: append-only JSONL at backend/.aegis/quarantine/failed_events.jsonl (or test-local sink).
+- Record fidelity: base64 raw Kafka value bytes, raw key, exact ordered duplicate headers, Kafka partition/offset, timestamp, failure stage, and sanitized failure messages.
+- No DLQ topic in Phase 2.
+- Replay: QuarantineReplayService republishes exact raw bytes, original canonical topic, original key, and original ordered headers, then appends the `aegis_replayed` replay-marker header with value `1`. Replay receives new Kafka CreateTime and offsets. Source quarantine record remains retained. No automatic recursive replay loop exists.
+
+Failure Contract
+- Validation/deserialization failure: quarantine succeeds -> commit offset + 1.
+- Persistence failure: quarantine succeeds -> commit offset + 1.
+- Quarantine failure: raises QuarantineWriteError -> NO offset commit.
+- Negative-path integration test suite covers: malformed Kafka JSON quarantine, downstream persistence failure quarantine, quarantine sink write failure non-commit, recoverable replay, poison replay loop prevention, VictoriaMetrics and OpenSearch outages, invalid routing/header rejections, and future event-type rejection.
+
+Readiness & Observability
+- Core endpoint: GET /ready remains database/core readiness (verifies PostgreSQL SELECT 1).
+- Telemetry endpoint: GET /ready/telemetry checks Kafka, VictoriaMetrics, OpenSearch, metric query adapter, and evidence query adapter.
+  - HTTP 200: all components ready.
+  - HTTP 503: any component unready.
+  - Live closure audit response: /health -> 200 {"status":"ok","version":"0.1.0"}, /ready -> 200 {"status":"ready"}, /ready/telemetry -> 200 {"status":"ready","components":{"kafka":{"ready":true},"victoriametrics":{"ready":true},"opensearch":{"ready":true,"cluster_status":"green"},"metric_query":{"ready":true},"evidence_query":{"ready":true}}}.
+- Observability instrumentation: InstrumentedTelemetryPublisher, InstrumentedMetricHandler, InstrumentedEvidenceHandler, sample_consumer_lag.
+- Tracked metrics: publish latency, persistence latency, end-to-end latency, consumer lag, retries, failures, quarantines, throughput, p50, p99.
+- Memory: circular buffer sample window (sample_window=1000). Not presented as formal production benchmarks.
+
+All-Eight Real Pipeline Evidence
+All 8 canonical simulator scenarios have been executed and verified end-to-end through real Kafka, VictoriaMetrics, and OpenSearch with live query-adapter reconciliation:
+
+| Scenario | Requests | Total Events | METRIC | LOG | SYSTEM | Published | VM Found (Missing/Unexp) | OS Found (Missing/Unexp) | Lag (m/l/s) | Quarantine | Immutable |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| cpu-saturation | 300 | 2794 | 2490 | 300 | 4 | 2794 | 2490 (0/0) | 304 (0/0) | 0 / 0 / 0 | 0 | YES |
+| memory-exhaustion | 300 | 2794 | 2490 | 300 | 4 | 2794 | 2490 (0/0) | 304 (0/0) | 0 / 0 / 0 | 0 | YES |
+| connection-exhaustion | 300 | 2794 | 2490 | 300 | 4 | 2794 | 2490 (0/0) | 304 (0/0) | 0 / 0 / 0 | 0 | YES |
+| dependency-latency | 300 | 2794 | 2490 | 300 | 4 | 2794 | 2490 (0/0) | 304 (0/0) | 0 / 0 / 0 | 0 | YES |
+| dependency-failure | 300 | 2794 | 2490 | 300 | 4 | 2794 | 2490 (0/0) | 304 (0/0) | 0 / 0 / 0 | 0 | YES |
+| error-rate-spike | 300 | 2794 | 2490 | 300 | 4 | 2794 | 2490 (0/0) | 304 (0/0) | 0 / 0 / 0 | 0 | YES |
+| traffic-surge | 700 | 3994 | 3290 | 700 | 4 | 3994 | 3290 (0/0) | 704 (0/0) | 0 / 0 / 0 | 0 | YES |
+| bad-deployment-config | 300 | 2795 | 2490 | 300 | 5 | 2795 | 2490 (0/0) | 305 (0/0) | 0 / 0 / 0 | 0 | YES |
+
+Across all 8 scenarios:
+- Event-ID reconciliation: 0 missing, 0 unexpected across both stores.
+- Terminal consumer lag: metrics_lag = 0, logs_lag = 0, system_lag = 0.
+- Healthy quarantine count: 0.
+- ScenarioRunResult before/after immutability: preserved.
+
+System Marker Evidence
+- Standard fault scenarios (cpu-saturation, memory-exhaustion, connection-exhaustion, dependency-latency, dependency-failure, error-rate-spike): scenario_started, fault_injected, fault_recovered, scenario_completed.
+- Traffic surge: scenario_started, traffic_surge_started, traffic_surge_ended, scenario_completed.
+- Bad deployment config: scenario_started, deployment_changed, fault_injected, fault_recovered, scenario_completed.
+  - deployment_changed payload: deployment_version = "bad-config-v1", change_type = "configuration".
+- In all scenarios, persisted OpenSearch SYSTEM marker multisets matched source simulator markers exactly.
+
+Research Provenance & Claim Boundary
+- Provenance preserved: scenario_id, scenario_version, run_id, seed, reproducibility_key, event_id, event_time.
+- Transport metadata distinction: Simulator semantics and ground truth are deterministic and reproducible. Transport metadata (Kafka offsets, publication CreateTime, replay coordinates) are execution-specific and not deterministic research identifiers.
+- Proven in Phase 2: telemetry transport correctness, canonical serialization, at-least-once persistence, query accuracy, event-ID preservation, run-context preservation, marker preservation, quarantine/replay behavior, readiness, observability, zero terminal lag, zero healthy quarantine, and all-eight real-pipeline scenario coverage.
+- NOT claimed in Phase 2: anomaly detection accuracy, ML false-positive rate, incident correlation, root-cause analysis, blast-radius accuracy, RAG quality, LLM reasoning, remediation success, or production SLO capacity.
+
+Phase 1 Freeze Integrity & Scope Isolation
+- Modifications to backend/app/simulator production files: NONE.
+- Modifications to research contracts (experiment_manifest.schema.json, ground_truth.schema.json): NONE.
+- Modifications to canonical telemetry schemas/topics: NONE.
+- Phase 3+ runtime leakage: NONE (zero anomaly models, incident correlation, causal graphs, RAG, or agent runtime code).
+- Host/production safety: PASS (zero physical host faulting, process killing, firewall manipulation, or credential logging).
+
+Final Regression & Quality Evidence
+- Static checks:
+  - poetry check: PASS
+  - ruff check app tests: PASS
+  - mypy app: PASS (72 source files)
+  - mypy app tests: PASS (108 source files)
+- Test suite:
+  - Non-integration suite: 379 passed, 36 deselected in 5.56s
+  - Full backend regression suite: 415 passed in 1237.53s (failed = 0, errors = 0, unexpected skipped = 0)
+- Remote CI: GitHub Actions run 36703187521 on commit c48402529a7b0b90ea0a891f188b36b77d9ba898 passed all four jobs (backend-quality, frontend-quality, docker-core-health, telemetry-integration with 36 passed, 379 deselected in 193.90s).
+- Resource warnings: NONE.
+- Closure blockers: 0.
+
+Phase 2 Freeze Boundary
+Phase 2 freezes:
+- Detached ScenarioRunResult -> TelemetryPipelinePublisher boundary
+- Six canonical Kafka topic contracts and active METRIC / LOG / SYSTEM routing
+- aiokafka transport semantics, message keys, and required execution context headers
+- At-least-once manual-commit consumer contracts (MetricsConsumer, EvidenceConsumer)
+- VictoriaMetrics metrics persistence and PromQL query contract
+- OpenSearch evidence persistence and Elasticsearch DSL query contract
+- Exact-byte JSONL quarantine and replay semantics (no DLQ)
+- Failure commit / non-commit contracts
+- /ready/telemetry composed readiness endpoint
+- Observability instrumentation and lag sampling
+- All-eight canonical real-pipeline scenario verification
+Any future change to these frozen semantics requires explicit change control and review.
+
+Deferred-by-Design Register
+The following capabilities are deferred by design to subsequent phases:
+- Phase 3: ML anomaly detection, scoring models, and anomaly event streaming.
+- Phase 4: Incident creation, topology-aware incident correlation, and blast-radius calculation.
+- Phase 5: Historical knowledge retrieval, Graph-RAG, and telemetry vector indexing.
+- Phase 6: Autonomous agent reasoning, multi-agent debate, and automated remediation execution.
+- General: Formal production-scale throughput benchmarks.
+
+Current project baseline after Phase 2
+PHASE 0 — FOUNDATION
+COMPLETE — APPROVED — FROZEN
+
+PHASE 1 — DISTRIBUTED SIMULATOR
+COMPLETE — APPROVED — FROZEN
+
+PHASE 2 — TELEMETRY PIPELINE
+COMPLETE — APPROVED — FROZEN
+
+The project now has a reproducible engineering foundation, a deterministic distributed-system simulator, live Kafka transport, VictoriaMetrics metrics persistence, OpenSearch evidence persistence, unified query adapters, quarantine/replay reliability, composed readiness, and complete all-eight scenario live telemetry pipeline evidence.
+
+Immediate next action
+The next eligible implementation phase identified by the project roadmap is:
+Phase 3 — ML Anomaly Detection & Scoring
+
+Phase 3 implementation is NOT authorized by this progress record. A dedicated Phase 3 plan and design task must be explicitly reviewed and authorized before implementation begins.
+Do not retroactively modify frozen Phase 0, Phase 1, or Phase 2 contracts without explicit change control.
