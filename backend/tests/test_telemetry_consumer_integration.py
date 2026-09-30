@@ -93,15 +93,13 @@ async def test_real_metrics_consumer_integration() -> None:
 
             await consumer.start()
             try:
-                # Poll for the published record
-                envelope: TelemetryEnvelope | None = None
-                for _ in range(100):
-                    env = await consumer.consume_one(timeout_ms=1000)
-                    if isinstance(env, TelemetryEnvelope) and env.event.event_id == event_id:
-                        envelope = env
-                        break
+                tp = TopicPartition(pub_result.topic, pub_result.partition)
+                consumer._consumer.seek(tp, pub_result.offset)  # type: ignore[union-attr]
+
+                envelope = await consumer.consume_one(timeout_ms=5000)
 
                 assert envelope is not None, "Failed to consume published metric event"
+                assert isinstance(envelope, TelemetryEnvelope)
                 assert envelope.event.event_id == event_id
                 assert envelope.event.event_time == event_time
                 assert envelope.event.tenant_id == tenant_id
@@ -117,7 +115,6 @@ async def test_real_metrics_consumer_integration() -> None:
                 assert len(handler.envelopes) >= 1
 
                 # Verify manual offset commit on broker
-                tp = TopicPartition(pub_result.topic, pub_result.partition)
                 committed_offset = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
                 assert committed_offset is not None
                 assert committed_offset == pub_result.offset + 1
@@ -223,13 +220,18 @@ async def test_real_evidence_consumer_integration() -> None:
 
             await consumer.start()
             try:
+                tp_log = TopicPartition(pub_log.topic, pub_log.partition)
+                tp_sys = TopicPartition(pub_sys.topic, pub_sys.partition)
+                consumer._consumer.seek(tp_log, pub_log.offset)  # type: ignore[union-attr]
+                consumer._consumer.seek(tp_sys, pub_sys.offset)  # type: ignore[union-attr]
+
                 consumed_log: TelemetryEnvelope | None = None
                 consumed_sys: TelemetryEnvelope | None = None
 
-                for _ in range(100):
+                for _ in range(10):
                     if consumed_log is not None and consumed_sys is not None:
                         break
-                    env = await consumer.consume_one(timeout_ms=1000)
+                    env = await consumer.consume_one(timeout_ms=5000)
                     if isinstance(env, TelemetryEnvelope):
                         if env.event.event_id == log_event_id:
                             consumed_log = env
@@ -242,11 +244,13 @@ async def test_real_evidence_consumer_integration() -> None:
                 assert consumed_log.event.event_id == log_event_id
                 assert consumed_log.event.event_time == log_event_time
                 assert consumed_log.context.run_id == log_run_id
+                assert consumed_log.offset == pub_log.offset
                 assert consumed_log.topic == KafkaTopic.LOGS.value
 
                 assert consumed_sys.event.event_id == sys_event_id
                 assert consumed_sys.event.event_time == sys_event_time
                 assert consumed_sys.context.run_id == sys_run_id
+                assert consumed_sys.offset == pub_sys.offset
                 assert consumed_sys.topic == KafkaTopic.SYSTEM_EVENTS.value
 
                 # Verify committed offsets for both partitions

@@ -431,13 +431,18 @@ async def test_real_kafka_to_evidence_consumer_to_opensearch() -> None:
 
         await consumer.start()
         try:
+            tp_log = TopicPartition(pub_log.topic, pub_log.partition)
+            tp_sys = TopicPartition(pub_sys.topic, pub_sys.partition)
+            consumer._consumer.seek(tp_log, pub_log.offset)  # type: ignore[union-attr]
+            consumer._consumer.seek(tp_sys, pub_sys.offset)  # type: ignore[union-attr]
+
             consumed_log: TelemetryEnvelope | None = None
             consumed_sys: TelemetryEnvelope | None = None
 
-            for _ in range(100):
+            for _ in range(10):
                 if consumed_log is not None and consumed_sys is not None:
                     break
-                env = await consumer.consume_one(timeout_ms=1000)
+                env = await consumer.consume_one(timeout_ms=5000)
                 if env is not None:
                     if env.event.event_id == log_event_id:
                         consumed_log = env
@@ -446,13 +451,15 @@ async def test_real_kafka_to_evidence_consumer_to_opensearch() -> None:
 
             assert consumed_log is not None, "Failed to consume LOG event"
             assert consumed_sys is not None, "Failed to consume SYSTEM event"
+            assert consumed_log.event.event_id == log_event_id
+            assert consumed_log.offset == pub_log.offset
+            assert consumed_sys.event.event_id == sys_event_id
+            assert consumed_sys.offset == pub_sys.offset
 
-            tp_log = TopicPartition(pub_log.topic, pub_log.partition)
             committed_log = await consumer._consumer.committed(tp_log)  # type: ignore[union-attr]
             assert committed_log is not None
             assert committed_log >= pub_log.offset + 1
 
-            tp_sys = TopicPartition(pub_sys.topic, pub_sys.partition)
             committed_sys = await consumer._consumer.committed(tp_sys)  # type: ignore[union-attr]
             assert committed_sys is not None
             assert committed_sys >= pub_sys.offset + 1
@@ -544,11 +551,11 @@ async def test_real_opensearch_persistence_failure_leaves_offset_uncommitted() -
         await consumer.start()
         try:
             tp = TopicPartition(pub_result.topic, pub_result.partition)
+            consumer._consumer.seek(tp, pub_result.offset)  # type: ignore[union-attr]
             initial_committed = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
 
             with pytest.raises(ConsumerHandlerError, match="Downstream handler failed"):
-                for _ in range(50):
-                    await consumer.consume_one(timeout_ms=1000)
+                await consumer.consume_one(timeout_ms=5000)
 
             after_failure_committed = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
             if initial_committed is None:

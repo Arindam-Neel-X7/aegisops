@@ -90,14 +90,12 @@ async def test_real_quarantine_malformed_record() -> None:
         await consumer.start()
         try:
             tp = TopicPartition(topic, metadata.partition)
-            outcome = None
-            for _ in range(100):
-                res = await consumer.consume_one(timeout_ms=1000)
-                if isinstance(res, QuarantineRecord) and decode_bytes(res.raw_value_base64) == raw_poison_payload:
-                    outcome = res
-                    break
+            consumer._consumer.seek(tp, metadata.offset)  # type: ignore[union-attr]
+
+            outcome = await consumer.consume_one(timeout_ms=5000)
 
             assert outcome is not None, "Failed to consume and quarantine poison record"
+            assert isinstance(outcome, QuarantineRecord)
             assert outcome.failure_stage == "deserialization"
             assert decode_bytes(outcome.raw_value_base64) == raw_poison_payload
             assert decode_bytes(outcome.raw_key_base64) == b"poison-key"
@@ -186,19 +184,18 @@ async def test_real_quarantine_persistence_failure() -> None:
         await consumer.start()
         try:
             tp = TopicPartition(topic, pub_result.partition)
-            outcome = None
-            for _ in range(100):
-                res = await consumer.consume_one(timeout_ms=1000)
-                if isinstance(res, QuarantineRecord) and res.event_id == event_id:
-                    outcome = res
-                    break
+            consumer._consumer.seek(tp, pub_result.offset)  # type: ignore[union-attr]
+
+            outcome = await consumer.consume_one(timeout_ms=5000)
 
             assert outcome is not None, "Failed to consume and quarantine failed record"
+            assert isinstance(outcome, QuarantineRecord)
             assert outcome.failure_stage == "persistence"
             assert outcome.event_id == event_id
             assert outcome.run_id == run_id
             assert outcome.service == "order-service"
             assert outcome.event_type == "metric"
+            assert outcome.offset == pub_result.offset
             assert "VictoriaMetrics outage" in outcome.failure_message_sanitized
 
             # Offset committed after quarantine success
@@ -247,11 +244,11 @@ async def test_real_quarantine_failure_leaves_offset_uncommitted() -> None:
     await consumer.start()
     try:
         tp = TopicPartition(topic, metadata.partition)
+        consumer._consumer.seek(tp, metadata.offset)  # type: ignore[union-attr]
         initial_committed = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
 
         with pytest.raises(QuarantineWriteError, match="Storage disk I/O failure"):
-            for _ in range(50):
-                await consumer.consume_one(timeout_ms=1000)
+            await consumer.consume_one(timeout_ms=5000)
 
         # Verify offset was NOT committed
         after_committed = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
@@ -360,15 +357,17 @@ async def test_real_recoverable_replay() -> None:
 
         await consumer.start()
         try:
-            outcome = None
-            for _ in range(100):
-                res = await consumer.consume_one(timeout_ms=1000)
-                if isinstance(res, TelemetryEnvelope) and res.event.event_id == event_id:
-                    outcome = res
-                    break
+            tp = TopicPartition(rep_res.replay_topic, rep_res.replay_partition)
+            consumer._consumer.seek(tp, rep_res.replay_offset)  # type: ignore[union-attr]
+
+            outcome = await consumer.consume_one(timeout_ms=5000)
 
             assert outcome is not None, "Failed to consume replayed record"
+            assert isinstance(outcome, TelemetryEnvelope)
             assert outcome.event.event_id == event_id
+            assert outcome.topic == rep_res.replay_topic
+            assert outcome.partition == rep_res.replay_partition
+            assert outcome.offset == rep_res.replay_offset
 
             # Verify persisted in VictoriaMetrics and retrievable via Query adapter
             async with httpx.AsyncClient(timeout=5.0) as client:
@@ -438,14 +437,15 @@ async def test_real_poison_replay_quarantines_again_without_loop() -> None:
 
         await consumer.start()
         try:
-            outcome = None
-            for _ in range(100):
-                res = await consumer.consume_one(timeout_ms=1000)
-                if isinstance(res, QuarantineRecord) and decode_bytes(res.raw_value_base64) == raw_poison:
-                    outcome = res
-                    break
+            tp = TopicPartition(rep_res.replay_topic, rep_res.replay_partition)
+            consumer._consumer.seek(tp, rep_res.replay_offset)  # type: ignore[union-attr]
+
+            outcome = await consumer.consume_one(timeout_ms=5000)
 
             assert outcome is not None, "Failed to consume and re-quarantine replayed poison"
+            assert isinstance(outcome, QuarantineRecord)
+            assert outcome.offset == rep_res.replay_offset
+            assert decode_bytes(outcome.raw_value_base64) == raw_poison
 
             # Re-quarantined with replay marker header present
             headers_dict = {h.name: h.value_base64 for h in outcome.headers}
@@ -557,23 +557,35 @@ async def test_real_pipeline_observability_metrics() -> None:
 
         await consumer.start()
         try:
-            tp = TopicPartition(topic, 0)
+            tp = TopicPartition(topic, publish_results[0].partition)
 
             # Sample lag before consumption from Kafka offsets
             initial_lag = await sample_consumer_lag(consumer._consumer, tp, metrics=pipeline_metrics)  # type: ignore[union-attr]
             assert initial_lag >= 3
 
-            # Process 2 events successfully through instrumented handler
-            for i in range(2):
-                outcome = await consumer.consume_one(timeout_ms=3000)
-                assert isinstance(outcome, TelemetryEnvelope)
+            # Process 1st event successfully through instrumented handler
+            consumer._consumer.seek(tp, publish_results[0].offset)  # type: ignore[union-attr]
+            outcome1 = await consumer.consume_one(timeout_ms=5000)
+            assert isinstance(outcome1, TelemetryEnvelope)
+            assert outcome1.event.event_id == events_to_publish[0][0].event_id
+            assert outcome1.offset == publish_results[0].offset
+
+            # Process 2nd event successfully through instrumented handler
+            consumer._consumer.seek(tp, publish_results[1].offset)  # type: ignore[union-attr]
+            outcome2 = await consumer.consume_one(timeout_ms=5000)
+            assert isinstance(outcome2, TelemetryEnvelope)
+            assert outcome2.event.event_id == events_to_publish[1][0].event_id
+            assert outcome2.offset == publish_results[1].offset
 
             # Introduce simulated persistence failure for 3rd event to trigger quarantine path
             instrumented_handler._adapter = MagicMock()
             instrumented_handler._adapter.persist = AsyncMock(side_effect=RuntimeError("Storage failure"))
 
-            fail_outcome = await consumer.consume_one(timeout_ms=3000)
+            consumer._consumer.seek(tp, publish_results[2].offset)  # type: ignore[union-attr]
+            fail_outcome = await consumer.consume_one(timeout_ms=5000)
             assert isinstance(fail_outcome, QuarantineRecord)
+            assert fail_outcome.event_id == events_to_publish[2][0].event_id
+            assert fail_outcome.offset == publish_results[2].offset
 
             # Sample lag after consumption
             final_lag = await sample_consumer_lag(consumer._consumer, tp, metrics=pipeline_metrics)  # type: ignore[union-attr]
