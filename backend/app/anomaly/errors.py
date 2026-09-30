@@ -3,12 +3,28 @@ class AnomalyError(Exception):
 
 
 class AnomalyValidationError(AnomalyError):
-    """Raised when an AnomalySignal fails contract validation."""
+    """Raised when an anomaly signal or configuration fails contract validation."""
 
 
 class AnomalySerializationError(AnomalyError):
-    """Raised when an AnomalySignal fails serialization."""
+    """Raised when an anomaly entity fails serialization."""
 
 
 class AnomalyDeserializationError(AnomalyError):
-    """Raised when deserializing an AnomalySignal fails."""
+    """Raised when deserializing an anomaly entity fails."""
+
+
+class AnomalyExperimentError(AnomalyError):
+    """Base exception for anomaly experiment configuration errors."""
+
+
+class AnomalyExperimentValidationError(AnomalyValidationError, AnomalyExperimentError):
+    """Raised when an AnomalyExperimentConfig fails validation."""
+
+
+class AnomalyExperimentSerializationError(AnomalySerializationError, AnomalyExperimentError):
+    """Raised when serializing an AnomalyExperimentConfig fails."""
+
+
+class AnomalyExperimentDeserializationError(AnomalyDeserializationError, AnomalyExperimentError):
+    """Raised when deserializing an AnomalyExperimentConfig fails."""
