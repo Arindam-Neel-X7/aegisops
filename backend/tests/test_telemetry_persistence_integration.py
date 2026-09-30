@@ -209,14 +209,18 @@ async def test_real_kafka_to_metrics_consumer_to_victoriametrics() -> None:
             pub_result = await producer.publish(event, context)
             assert pub_result.topic == KafkaTopic.METRICS.value
 
+            tp = TopicPartition(pub_result.topic, pub_result.partition)
+            consumer._consumer.seek(tp, pub_result.offset)  # type: ignore[union-attr]
+
             envelope = await consumer.consume_one(timeout_ms=5000)
             assert envelope is not None, "Failed to consume published metric event"
+            assert isinstance(envelope, TelemetryEnvelope)
             assert envelope.event.event_id == event_id
-            assert envelope.topic == KafkaTopic.METRICS.value
+            assert envelope.topic == pub_result.topic
+            assert envelope.partition == pub_result.partition
             assert envelope.offset == pub_result.offset
 
             # Verify committed Kafka offset is consumed offset + 1
-            tp = TopicPartition(pub_result.topic, pub_result.partition)
             committed_offset = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
             assert committed_offset is not None
             assert committed_offset == pub_result.offset + 1
@@ -307,10 +311,14 @@ async def test_real_persistence_failure_leaves_offset_uncommitted() -> None:
         try:
             pub_result = await producer.publish(event, context)
             tp = TopicPartition(pub_result.topic, pub_result.partition)
+            consumer._consumer.seek(tp, pub_result.offset)  # type: ignore[union-attr]
             initial_committed = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
 
-            with pytest.raises(ConsumerHandlerError, match="Downstream handler failed"):
+            with pytest.raises(ConsumerHandlerError, match="Downstream handler failed") as exc_info:
                 await consumer.consume_one(timeout_ms=5000)
+
+            assert str(event_id) in str(exc_info.value)
+            assert str(pub_result.offset) in str(exc_info.value)
 
             # Check that failed record offset was NOT committed
             after_failure_committed = await consumer._consumer.committed(tp)  # type: ignore[union-attr]
