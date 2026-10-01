@@ -80,3 +80,23 @@ class IsolationForestFitError(IsolationForestError):
 
 class IsolationForestInsufficientHistoryError(IsolationForestError, InsufficientDataError):
     """Raised when training history is insufficient to fit Isolation Forest baseline."""
+
+
+class AutoencoderError(AnomalyError):
+    """Base exception for Autoencoder baseline model errors."""
+
+
+class AutoencoderConfigurationError(AutoencoderError, AnomalyValidationError):
+    """Raised when Autoencoder baseline configuration fails contract validation."""
+
+
+class AutoencoderFitError(AutoencoderError):
+    """Raised when Autoencoder model fitting or reconstruction fails."""
+
+
+class AutoencoderInsufficientHistoryError(AutoencoderError, InsufficientDataError):
+    """Raised when training history is insufficient to fit Autoencoder baseline."""
+
+
+class AutoencoderArtifactError(AutoencoderError):
+    """Raised when Autoencoder artifact validation, serialization, or loading fails."""
