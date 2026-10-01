@@ -11,6 +11,10 @@ from app.anomaly.errors import (
     FeatureExtractionError,
     InsufficientDataError,
     InvalidFeatureInputError,
+    ProphetConfigurationError,
+    ProphetError,
+    ProphetFitError,
+    ProphetInsufficientHistoryError,
     WindowingError,
 )
 from app.anomaly.experiment import (
@@ -49,6 +53,14 @@ from app.anomaly.models import (
     CalibrationMetadata,
     EventTimeWindow,
 )
+from app.anomaly.prophet import (
+    SUPPORTED_PROPHET_CONFIG_SCHEMA_VERSION,
+    ProphetBaseline,
+    ProphetBaselineConfig,
+    ProphetScoreResult,
+    ProphetScoreStatus,
+    run_prophet_baseline,
+)
 from app.anomaly.serialization import (
     ANOMALY_EVENT_TYPE,
     ANOMALY_KAFKA_TOPIC,
@@ -65,6 +77,7 @@ __all__ = [
     "SUPPORTED_ANOMALY_SCHEMA_VERSION",
     "SUPPORTED_EXPERIMENT_SCHEMA_VERSION",
     "SUPPORTED_FEATURE_SCHEMA_VERSION",
+    "SUPPORTED_PROPHET_CONFIG_SCHEMA_VERSION",
     "AnomalyDeserializationError",
     "AnomalyError",
     "AnomalyEvidence",
@@ -93,6 +106,14 @@ __all__ = [
     "InvalidFeatureInputError",
     "ModelSpecification",
     "OutputDeclaration",
+    "ProphetBaseline",
+    "ProphetBaselineConfig",
+    "ProphetConfigurationError",
+    "ProphetError",
+    "ProphetFitError",
+    "ProphetInsufficientHistoryError",
+    "ProphetScoreResult",
+    "ProphetScoreStatus",
     "RawObservation",
     "ScenarioReference",
     "WindowingError",
@@ -105,6 +126,7 @@ __all__ = [
     "observations_from_metric_samples",
     "observations_from_scenario_result",
     "observations_from_telemetry_events",
+    "run_prophet_baseline",
     "serialize_anomaly_signal",
     "serialize_experiment_config",
     "to_canonical_telemetry_event",

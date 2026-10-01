@@ -21,6 +21,7 @@ celery = { version = "^5.3.6", extras = ["redis"] }
 redis = "^5.0.1"
 httpx = { version = "^0.25.0", extras = ["http2"] }
 aiokafka = "^0.14.0"
+prophet = "^1.4.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.2"
@@ -37,7 +38,12 @@ warn_return_any = true
 warn_unused_configs = true
 
 [[tool.mypy.overrides]]
-module = "aiokafka.*"
+module = [
+    "aiokafka.*",
+    "prophet.*",
+    "cmdstanpy.*",
+    "pandas.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

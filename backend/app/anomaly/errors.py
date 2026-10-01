@@ -48,3 +48,19 @@ class InsufficientDataError(AnomalyFeatureError):
 
 class WindowingError(AnomalyFeatureError):
     """Raised when observation windowing parameters or slicing fail."""
+
+
+class ProphetError(AnomalyError):
+    """Base exception for Prophet baseline model errors."""
+
+
+class ProphetConfigurationError(ProphetError, AnomalyValidationError):
+    """Raised when Prophet baseline configuration fails contract validation."""
+
+
+class ProphetFitError(ProphetError):
+    """Raised when Prophet model fitting or forecasting fails."""
+
+
+class ProphetInsufficientHistoryError(ProphetError, InsufficientDataError):
+    """Raised when training history is insufficient to fit Prophet baseline."""
