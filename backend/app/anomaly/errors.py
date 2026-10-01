@@ -64,3 +64,19 @@ class ProphetFitError(ProphetError):
 
 class ProphetInsufficientHistoryError(ProphetError, InsufficientDataError):
     """Raised when training history is insufficient to fit Prophet baseline."""
+
+
+class IsolationForestError(AnomalyError):
+    """Base exception for Isolation Forest baseline model errors."""
+
+
+class IsolationForestConfigurationError(IsolationForestError, AnomalyValidationError):
+    """Raised when Isolation Forest baseline configuration fails contract validation."""
+
+
+class IsolationForestFitError(IsolationForestError):
+    """Raised when Isolation Forest model fitting or scoring fails."""
+
+
+class IsolationForestInsufficientHistoryError(IsolationForestError, InsufficientDataError):
+    """Raised when training history is insufficient to fit Isolation Forest baseline."""
