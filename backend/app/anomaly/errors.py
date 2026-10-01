@@ -100,3 +100,19 @@ class AutoencoderInsufficientHistoryError(AutoencoderError, InsufficientDataErro
 
 class AutoencoderArtifactError(AutoencoderError):
     """Raised when Autoencoder artifact validation, serialization, or loading fails."""
+
+
+class CalibrationError(AnomalyError):
+    """Base exception for calibration and severity mapping errors."""
+
+
+class CalibrationConfigurationError(CalibrationError, AnomalyValidationError):
+    """Raised when calibration configuration fails contract validation."""
+
+
+class CalibrationReferenceError(CalibrationError):
+    """Raised when calibration reference data is malformed, invalid, or insufficient."""
+
+
+class MissingCalibrationError(CalibrationError):
+    """Raised when calibration is requested for a model lacking fitted calibration parameters."""
