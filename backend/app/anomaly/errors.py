@@ -28,3 +28,23 @@ class AnomalyExperimentSerializationError(AnomalySerializationError, AnomalyExpe
 
 class AnomalyExperimentDeserializationError(AnomalyDeserializationError, AnomalyExperimentError):
     """Raised when deserializing an AnomalyExperimentConfig fails."""
+
+
+class AnomalyFeatureError(AnomalyError):
+    """Base exception for feature extraction and windowing errors."""
+
+
+class FeatureExtractionError(AnomalyFeatureError):
+    """Raised when feature extraction fails unexpectedly."""
+
+
+class InvalidFeatureInputError(AnomalyFeatureError, AnomalyValidationError):
+    """Raised when input observations or telemetry records are malformed or invalid."""
+
+
+class InsufficientDataError(AnomalyFeatureError):
+    """Raised when input observations do not satisfy minimum data requirements."""
+
+
+class WindowingError(AnomalyFeatureError):
+    """Raised when observation windowing parameters or slicing fail."""
