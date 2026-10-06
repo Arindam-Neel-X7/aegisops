@@ -1,0 +1,193 @@
+{
+  "schema_version": "1.0",
+  "package_id": "phase3-task-3-9-comparison",
+  "package_version": "1.0.0",
+  "code_revision": "481652c2047a59e697c3008115da0faefcbbde01",
+  "environment": "simulation",
+  "scenario_ids": [
+    "cpu-saturation",
+    "memory-exhaustion",
+    "connection-exhaustion",
+    "dependency-latency",
+    "dependency-failure",
+    "error-rate-spike",
+    "traffic-surge",
+    "bad-deployment-config"
+  ],
+  "model_names": [
+    "prophet",
+    "isolation_forest",
+    "autoencoder"
+  ],
+  "calibration_seed": 41,
+  "evaluation_seed": 42,
+  "calibration_partition_id": "partition-calibration-seed-41",
+  "evaluation_partition_id": "partition-evaluation-seed-42",
+  "calibration_cutoff_seconds": 300.0,
+  "feature_window": {
+    "feature_config_id": "feat-cfg-canonical-v1",
+    "feature_names": [
+      "http_request_duration_ms:mean",
+      "http_requests_total:mean"
+    ],
+    "window_size_seconds": 1.0,
+    "step_size_seconds": 1.0,
+    "aggregation_methods": [
+      "mean",
+      "p95",
+      "std"
+    ],
+    "imputation_strategy": "forward_fill"
+  },
+  "prophet_config": {
+    "schema_version": "1.0",
+    "model_name": "prophet",
+    "model_version": "1.0.0",
+    "target_feature": "http_request_duration_ms:mean",
+    "regressors": [],
+    "min_history_windows": 5,
+    "forecast_horizon_windows": 1,
+    "interval_width": 0.95,
+    "growth": "linear",
+    "changepoint_prior_scale": 0.05,
+    "seasonality_prior_scale": 10.0,
+    "seasonality_mode": "additive",
+    "yearly_seasonality": false,
+    "weekly_seasonality": false,
+    "daily_seasonality": false,
+    "uncertainty_samples": 0,
+    "seed": 42,
+    "score_normalization_method": "residual_interval_ratio_sigmoid",
+    "score_normalization_version": "1.0.0",
+    "score_normalization_parameters": {
+      "scale_factor": 3.0,
+      "floor": 0.0,
+      "cap": 1.0,
+      "epsilon": 0.0001
+    },
+    "warning_threshold": 0.5,
+    "error_threshold": 0.75,
+    "critical_threshold": 0.9,
+    "preprocessing_assumptions": {
+      "time_unit": "seconds",
+      "imputation": "none_or_explicit"
+    }
+  },
+  "isolation_forest_config": {
+    "schema_version": "1.0",
+    "model_name": "isolation_forest",
+    "model_version": "1.0.0",
+    "feature_names": [
+      "http_request_duration_ms:mean",
+      "http_requests_total:mean"
+    ],
+    "scaling_method": "standard",
+    "scaling_version": "1.0.0",
+    "n_estimators": 50,
+    "max_samples": "auto",
+    "contamination": 0.05,
+    "max_features": 1.0,
+    "bootstrap": false,
+    "random_state": 42,
+    "n_jobs": 1,
+    "min_training_windows": 5,
+    "raw_score_interpretation": "sklearn_score_samples_opposite_anomaly_direction",
+    "score_normalization_method": "empirical_spread_offset_sigmoid",
+    "score_normalization_version": "1.0.0",
+    "score_normalization_parameters": {
+      "scale_factor": 2.0,
+      "epsilon_spread": 0.05
+    },
+    "warning_threshold": 0.5,
+    "error_threshold": 0.75,
+    "critical_threshold": 0.9,
+    "artifact_metadata_version": "1.0.0"
+  },
+  "autoencoder_config": {
+    "schema_version": "1.0",
+    "model_name": "autoencoder",
+    "model_version": "1.0.0",
+    "framework_name": "scikit-learn",
+    "framework_version": "1.9.1",
+    "feature_names": [
+      "http_request_duration_ms:mean",
+      "http_requests_total:mean"
+    ],
+    "scaling_method": "standard",
+    "scaling_version": "1.0.0",
+    "bottleneck_dimension": 1,
+    "hidden_layer_sizes": [
+      1
+    ],
+    "activation": "relu",
+    "solver": "lbfgs",
+    "alpha": 0.0001,
+    "batch_size": "auto",
+    "learning_rate_init": 0.001,
+    "max_iter": 200,
+    "tol": 0.0001,
+    "random_state": 42,
+    "min_training_windows": 5,
+    "training_split_rule": "causal_prefix",
+    "training_split_version": "1.0.0",
+    "reconstruction_error_method": "mean_squared_error",
+    "reconstruction_error_version": "1.0.0",
+    "score_normalization_method": "empirical_tail_ratio_sigmoid",
+    "score_normalization_version": "1.0.0",
+    "score_normalization_parameters": {
+      "scale_factor": 3.0,
+      "epsilon_spread": 0.0001
+    },
+    "warning_threshold": 0.5,
+    "error_threshold": 0.75,
+    "critical_threshold": 0.9,
+    "artifact_schema_version": "1.0.0"
+  },
+  "calibration_config": {
+    "schema_version": "1.0",
+    "calibration_method": "empirical_cdf_percentile",
+    "calibration_method_version": "1.0.0",
+    "supported_models": [
+      "prophet",
+      "isolation_forest",
+      "autoencoder"
+    ],
+    "min_calibration_samples_per_model": 10,
+    "calibration_reference_id": "calib-ref-v1",
+    "calibration_reference_version": "1.0.0",
+    "calibration_split_rule": "independent_reference_set",
+    "calibration_split_version": "1.0.0",
+    "tie_handling_rule": "average",
+    "interpolation_rule": "linear",
+    "clipping_policy": "clamp_0_1",
+    "missing_calibration_policy": "error",
+    "degenerate_distribution_policy": "center_or_zero",
+    "severity_mapping_version": "1.0.0",
+    "severity_thresholds": {
+      "info_threshold": 0.2,
+      "warning_threshold": 0.5,
+      "error_threshold": 0.75,
+      "critical_threshold": 0.9
+    }
+  },
+  "decision_policy": {
+    "policy_name": "warning_threshold_binary_decision",
+    "policy_version": "1.0.0",
+    "decision_threshold": 0.5,
+    "description": "Calibrated anomaly score >= decision_threshold (WARNING, ERROR, or CRITICAL) is comparison-positive"
+  },
+  "label_policy": {
+    "policy_name": "half_open_active_interval",
+    "policy_version": "1.0.0",
+    "overlap_rule": "window_start_in_active_interval",
+    "description": "Ground truth positive when window_start falls in [truth_start, truth_end), pre-activation and post-recovery are ground truth negative"
+  },
+  "artifact_root": "research",
+  "requested_metrics": [
+    "precision",
+    "recall",
+    "f1",
+    "false_positive_rate",
+    "detection_latency"
+  ]
+}

@@ -1,0 +1,4 @@
+model_name,model_version,total_units,true_positives,false_positives,true_negatives,false_negatives,precision,recall,f1,false_positive_rate,scenarios_detected,detection_latency_mean_sec,detection_latency_median_sec,detection_latency_p95_sec,success_units,insufficient_units,failure_units
+prophet,1.0.0,240,39,89,71,41,0.304688,0.4875,0.375,0.55625,8,2.0,2.0,2.0,200,40,0
+isolation_forest,1.0.0,240,53,74,86,27,0.417323,0.6625,0.512077,0.4625,8,2.0,2.0,2.0,200,40,0
+autoencoder,1.0.0,240,52,72,88,28,0.419355,0.65,0.509804,0.45,8,1.0,1.0,1.0,200,40,0

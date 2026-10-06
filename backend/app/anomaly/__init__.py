@@ -1,3 +1,12 @@
+from app.anomaly.evaluation import (
+    SUPPORTED_EVALUATION_SCHEMA_VERSION,
+    SUPPORTED_DECISION_POLICY_VERSION,
+    SUPPORTED_LABEL_POLICY_VERSION,
+    compute_truth_interval,
+    evaluate_ground_truth_label,
+    compute_binary_decision,
+    classify_confusion_category,
+)
 from app.anomaly.autoencoder import (
     SUPPORTED_AE_ARTIFACT_SCHEMA_VERSION,
     SUPPORTED_AE_CONFIG_SCHEMA_VERSION,
@@ -123,6 +132,13 @@ from app.anomaly.serialization import (
 )
 
 __all__ = [
+    "SUPPORTED_EVALUATION_SCHEMA_VERSION",
+    "SUPPORTED_DECISION_POLICY_VERSION",
+    "SUPPORTED_LABEL_POLICY_VERSION",
+    "compute_truth_interval",
+    "evaluate_ground_truth_label",
+    "compute_binary_decision",
+    "classify_confusion_category",
     "ANOMALY_EVENT_TYPE",
     "ANOMALY_KAFKA_TOPIC",
     "MAX_UINT32",

@@ -1,0 +1,3400 @@
+{
+  "schema_version": "1.0",
+  "package_id": "phase3-task-3-9-comparison",
+  "package_version": "1.0.0",
+  "code_revision": "481652c2047a59e697c3008115da0faefcbbde01",
+  "created_at": "2026-10-05T14:28:57.467379+00:00",
+  "decision_threshold": 0.5,
+  "models": [
+    {
+      "model_name": "prophet",
+      "model_version": "1.0.0",
+      "micro_confusion_counts": {
+        "true_positives": 39,
+        "false_positives": 89,
+        "true_negatives": 71,
+        "false_negatives": 41,
+        "total_units": 240,
+        "evaluable_units": 240,
+        "success_units": 200,
+        "insufficient_units": 40,
+        "failure_units": 0
+      },
+      "micro_precision": {
+        "metric_name": "precision",
+        "value": 0.304688,
+        "status": "defined",
+        "reason": null,
+        "numerator": 39.0,
+        "denominator": 128.0
+      },
+      "micro_recall": {
+        "metric_name": "recall",
+        "value": 0.4875,
+        "status": "defined",
+        "reason": null,
+        "numerator": 39.0,
+        "denominator": 80.0
+      },
+      "micro_f1": {
+        "metric_name": "f1",
+        "value": 0.375,
+        "status": "defined",
+        "reason": null,
+        "numerator": 0.297071,
+        "denominator": 0.792188
+      },
+      "micro_false_positive_rate": {
+        "metric_name": "false_positive_rate",
+        "value": 0.55625,
+        "status": "defined",
+        "reason": null,
+        "numerator": 89.0,
+        "denominator": 160.0
+      },
+      "macro_precision": {
+        "metric_name": "macro_precision",
+        "value": 0.304688,
+        "status": "defined",
+        "reason": null,
+        "numerator": 2.4375,
+        "denominator": 8.0
+      },
+      "macro_recall": {
+        "metric_name": "macro_recall",
+        "value": 0.4875,
+        "status": "defined",
+        "reason": null,
+        "numerator": 3.9,
+        "denominator": 8.0
+      },
+      "macro_f1": {
+        "metric_name": "macro_f1",
+        "value": 0.375,
+        "status": "defined",
+        "reason": null,
+        "numerator": 2.999997,
+        "denominator": 8.0
+      },
+      "macro_false_positive_rate": {
+        "metric_name": "macro_false_positive_rate",
+        "value": 0.55625,
+        "status": "defined",
+        "reason": null,
+        "numerator": 4.45,
+        "denominator": 8.0
+      },
+      "macro_contributing_scenario_count": 8,
+      "latency_summary": {
+        "total_scenario_count": 8,
+        "contributing_scenario_count": 8,
+        "missing_detection_count": 0,
+        "min_seconds": 2.0,
+        "mean_seconds": 2.0,
+        "median_seconds": 2.0,
+        "p95_seconds": 2.0,
+        "max_seconds": 2.0
+      },
+      "scenario_coverage": {
+        "requested_count": 8,
+        "requested_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "executed_count": 8,
+        "executed_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "feature_ready_count": 8,
+        "feature_ready_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "scored_count": 8,
+        "scored_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "evaluable_count": 8,
+        "evaluable_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "detected_count": 8,
+        "detected_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "insufficient_count": 8,
+        "insufficient_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "failed_count": 0,
+        "failed_scenario_ids": []
+      },
+      "truth_positive_distribution": {
+        "distribution_name": "truth_positive",
+        "count": 80,
+        "status": "defined",
+        "min": 0.0,
+        "max": 0.924108,
+        "mean": 0.480564,
+        "median": 0.389943,
+        "p25": 0.234214,
+        "p75": 0.662741,
+        "p95": 0.924108
+      },
+      "truth_negative_distribution": {
+        "distribution_name": "truth_negative",
+        "count": 120,
+        "status": "defined",
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.64363,
+        "median": 0.732506,
+        "p25": 0.417131,
+        "p75": 0.959526,
+        "p95": 1.0
+      },
+      "predicted_positive_distribution": {
+        "distribution_name": "predicted_positive",
+        "count": 128,
+        "status": "defined",
+        "min": 0.538771,
+        "max": 1.0,
+        "mean": 0.78378,
+        "median": 0.732506,
+        "p25": 0.654069,
+        "p75": 0.9595,
+        "p95": 1.0
+      },
+      "predicted_negative_distribution": {
+        "distribution_name": "predicted_negative",
+        "count": 72,
+        "status": "defined",
+        "min": 0.0,
+        "max": 0.466108,
+        "mean": 0.213291,
+        "median": 0.227571,
+        "p25": 0.21832,
+        "p75": 0.242414,
+        "p95": 0.389943
+      },
+      "scenario_evaluations": [
+        {
+          "scenario_id": "cpu-saturation",
+          "model_name": "prophet",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 5,
+            "false_positives": 11,
+            "true_negatives": 9,
+            "false_negatives": 5,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.3125,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.5,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.384615,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.3125,
+            "denominator": 0.8125
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.55,
+            "status": "defined",
+            "reason": null,
+            "numerator": 11.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "cpu-saturation",
+            "model_name": "prophet",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.21832,
+            "max": 0.924108,
+            "mean": 0.496952,
+            "median": 0.522006,
+            "p25": 0.243444,
+            "p75": 0.661011,
+            "p95": 0.837753
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.641692,
+            "median": 0.732506,
+            "p25": 0.38653,
+            "p75": 0.959513,
+            "p95": 0.998795
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.538771,
+            "max": 1.0,
+            "mean": 0.794621,
+            "median": 0.810708,
+            "p25": 0.655383,
+            "p75": 0.959507,
+            "p95": 0.998709
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.389943,
+            "mean": 0.208996,
+            "median": 0.227571,
+            "p25": 0.21832,
+            "p75": 0.234288,
+            "p95": 0.342419
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "memory-exhaustion",
+          "model_name": "prophet",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 5,
+            "false_positives": 11,
+            "true_negatives": 9,
+            "false_negatives": 5,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.3125,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.5,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.384615,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.3125,
+            "denominator": 0.8125
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.55,
+            "status": "defined",
+            "reason": null,
+            "numerator": 11.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "memory-exhaustion",
+            "model_name": "prophet",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.21832,
+            "max": 0.924108,
+            "mean": 0.496952,
+            "median": 0.522006,
+            "p25": 0.243444,
+            "p75": 0.661011,
+            "p95": 0.837753
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.641692,
+            "median": 0.732506,
+            "p25": 0.38653,
+            "p75": 0.959513,
+            "p95": 0.998795
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.538771,
+            "max": 1.0,
+            "mean": 0.794621,
+            "median": 0.810708,
+            "p25": 0.655383,
+            "p75": 0.959507,
+            "p95": 0.998709
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.389943,
+            "mean": 0.208996,
+            "median": 0.227571,
+            "p25": 0.21832,
+            "p75": 0.234288,
+            "p95": 0.342419
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "connection-exhaustion",
+          "model_name": "prophet",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 5,
+            "false_positives": 11,
+            "true_negatives": 9,
+            "false_negatives": 5,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.3125,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.5,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.384615,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.3125,
+            "denominator": 0.8125
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.55,
+            "status": "defined",
+            "reason": null,
+            "numerator": 11.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "connection-exhaustion",
+            "model_name": "prophet",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.21832,
+            "max": 0.924108,
+            "mean": 0.496952,
+            "median": 0.522006,
+            "p25": 0.243444,
+            "p75": 0.661011,
+            "p95": 0.837753
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.641692,
+            "median": 0.732506,
+            "p25": 0.38653,
+            "p75": 0.959513,
+            "p95": 0.998795
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.538771,
+            "max": 1.0,
+            "mean": 0.794621,
+            "median": 0.810708,
+            "p25": 0.655383,
+            "p75": 0.959507,
+            "p95": 0.998709
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.389943,
+            "mean": 0.208996,
+            "median": 0.227571,
+            "p25": 0.21832,
+            "p75": 0.234288,
+            "p95": 0.342419
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "dependency-latency",
+          "model_name": "prophet",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 5,
+            "false_positives": 11,
+            "true_negatives": 9,
+            "false_negatives": 5,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.3125,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.5,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.384615,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.3125,
+            "denominator": 0.8125
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.55,
+            "status": "defined",
+            "reason": null,
+            "numerator": 11.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "dependency-latency",
+            "model_name": "prophet",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.21832,
+            "max": 0.924108,
+            "mean": 0.496952,
+            "median": 0.522006,
+            "p25": 0.243444,
+            "p75": 0.661011,
+            "p95": 0.837753
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.641692,
+            "median": 0.732506,
+            "p25": 0.38653,
+            "p75": 0.959513,
+            "p95": 0.998795
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.538771,
+            "max": 1.0,
+            "mean": 0.794621,
+            "median": 0.810708,
+            "p25": 0.655383,
+            "p75": 0.959507,
+            "p95": 0.998709
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.389943,
+            "mean": 0.208996,
+            "median": 0.227571,
+            "p25": 0.21832,
+            "p75": 0.234288,
+            "p95": 0.342419
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "dependency-failure",
+          "model_name": "prophet",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 5,
+            "false_positives": 11,
+            "true_negatives": 9,
+            "false_negatives": 5,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.3125,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.5,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.384615,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.3125,
+            "denominator": 0.8125
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.55,
+            "status": "defined",
+            "reason": null,
+            "numerator": 11.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "dependency-failure",
+            "model_name": "prophet",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.21832,
+            "max": 0.924108,
+            "mean": 0.496952,
+            "median": 0.522006,
+            "p25": 0.243444,
+            "p75": 0.661011,
+            "p95": 0.837753
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.641692,
+            "median": 0.732506,
+            "p25": 0.38653,
+            "p75": 0.959513,
+            "p95": 0.998795
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.538771,
+            "max": 1.0,
+            "mean": 0.794621,
+            "median": 0.810708,
+            "p25": 0.655383,
+            "p75": 0.959507,
+            "p95": 0.998709
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.389943,
+            "mean": 0.208996,
+            "median": 0.227571,
+            "p25": 0.21832,
+            "p75": 0.234288,
+            "p95": 0.342419
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "error-rate-spike",
+          "model_name": "prophet",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 5,
+            "false_positives": 11,
+            "true_negatives": 9,
+            "false_negatives": 5,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.3125,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.5,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.384615,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.3125,
+            "denominator": 0.8125
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.55,
+            "status": "defined",
+            "reason": null,
+            "numerator": 11.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "error-rate-spike",
+            "model_name": "prophet",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.21832,
+            "max": 0.924108,
+            "mean": 0.496952,
+            "median": 0.522006,
+            "p25": 0.243444,
+            "p75": 0.661011,
+            "p95": 0.837753
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.641692,
+            "median": 0.732506,
+            "p25": 0.38653,
+            "p75": 0.959513,
+            "p95": 0.998795
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.538771,
+            "max": 1.0,
+            "mean": 0.794621,
+            "median": 0.810708,
+            "p25": 0.655383,
+            "p75": 0.959507,
+            "p95": 0.998709
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.389943,
+            "mean": 0.208996,
+            "median": 0.227571,
+            "p25": 0.21832,
+            "p75": 0.234288,
+            "p95": 0.342419
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "traffic-surge",
+          "model_name": "prophet",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 4,
+            "false_positives": 12,
+            "true_negatives": 8,
+            "false_negatives": 6,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.25,
+            "status": "defined",
+            "reason": null,
+            "numerator": 4.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.4,
+            "status": "defined",
+            "reason": null,
+            "numerator": 4.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.307692,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.2,
+            "denominator": 0.65
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.6,
+            "status": "defined",
+            "reason": null,
+            "numerator": 12.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "traffic-surge",
+            "model_name": "prophet",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.729198,
+            "mean": 0.365846,
+            "median": 0.25251,
+            "p25": 0.232001,
+            "p75": 0.544286,
+            "p95": 0.69649
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.266658,
+            "max": 1.0,
+            "mean": 0.657197,
+            "median": 0.613231,
+            "p25": 0.543549,
+            "p75": 0.861723,
+            "p95": 0.998795
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.539686,
+            "max": 1.0,
+            "mean": 0.707889,
+            "median": 0.635602,
+            "p25": 0.543961,
+            "p75": 0.814091,
+            "p95": 0.998709
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.466108,
+            "mean": 0.243356,
+            "median": 0.234333,
+            "p25": 0.231507,
+            "p75": 0.270197,
+            "p95": 0.38794
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "bad-deployment-config",
+          "model_name": "prophet",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 5,
+            "false_positives": 11,
+            "true_negatives": 9,
+            "false_negatives": 5,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.3125,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.5,
+            "status": "defined",
+            "reason": null,
+            "numerator": 5.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.384615,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.3125,
+            "denominator": 0.8125
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.55,
+            "status": "defined",
+            "reason": null,
+            "numerator": 11.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "bad-deployment-config",
+            "model_name": "prophet",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.21832,
+            "max": 0.924108,
+            "mean": 0.496952,
+            "median": 0.522006,
+            "p25": 0.243444,
+            "p75": 0.661011,
+            "p95": 0.837753
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.641692,
+            "median": 0.732506,
+            "p25": 0.38653,
+            "p75": 0.959513,
+            "p95": 0.998795
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.538771,
+            "max": 1.0,
+            "mean": 0.794621,
+            "median": 0.810708,
+            "p25": 0.655383,
+            "p75": 0.959507,
+            "p95": 0.998709
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.389943,
+            "mean": 0.208996,
+            "median": 0.227571,
+            "p25": 0.21832,
+            "p75": 0.234288,
+            "p95": 0.342419
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "model_name": "isolation_forest",
+      "model_version": "1.0.0",
+      "micro_confusion_counts": {
+        "true_positives": 53,
+        "false_positives": 74,
+        "true_negatives": 86,
+        "false_negatives": 27,
+        "total_units": 240,
+        "evaluable_units": 240,
+        "success_units": 200,
+        "insufficient_units": 40,
+        "failure_units": 0
+      },
+      "micro_precision": {
+        "metric_name": "precision",
+        "value": 0.417323,
+        "status": "defined",
+        "reason": null,
+        "numerator": 53.0,
+        "denominator": 127.0
+      },
+      "micro_recall": {
+        "metric_name": "recall",
+        "value": 0.6625,
+        "status": "defined",
+        "reason": null,
+        "numerator": 53.0,
+        "denominator": 80.0
+      },
+      "micro_f1": {
+        "metric_name": "f1",
+        "value": 0.512077,
+        "status": "defined",
+        "reason": null,
+        "numerator": 0.552953,
+        "denominator": 1.079823
+      },
+      "micro_false_positive_rate": {
+        "metric_name": "false_positive_rate",
+        "value": 0.4625,
+        "status": "defined",
+        "reason": null,
+        "numerator": 74.0,
+        "denominator": 160.0
+      },
+      "macro_precision": {
+        "metric_name": "macro_precision",
+        "value": 0.416146,
+        "status": "defined",
+        "reason": null,
+        "numerator": 3.329167,
+        "denominator": 8.0
+      },
+      "macro_recall": {
+        "metric_name": "macro_recall",
+        "value": 0.6625,
+        "status": "defined",
+        "reason": null,
+        "numerator": 5.300000000000001,
+        "denominator": 8.0
+      },
+      "macro_f1": {
+        "metric_name": "macro_f1",
+        "value": 0.511154,
+        "status": "defined",
+        "reason": null,
+        "numerator": 4.089233999999999,
+        "denominator": 8.0
+      },
+      "macro_false_positive_rate": {
+        "metric_name": "macro_false_positive_rate",
+        "value": 0.4625,
+        "status": "defined",
+        "reason": null,
+        "numerator": 3.7,
+        "denominator": 8.0
+      },
+      "macro_contributing_scenario_count": 8,
+      "latency_summary": {
+        "total_scenario_count": 8,
+        "contributing_scenario_count": 8,
+        "missing_detection_count": 0,
+        "min_seconds": 2.0,
+        "mean_seconds": 2.0,
+        "median_seconds": 2.0,
+        "p95_seconds": 2.0,
+        "max_seconds": 2.0
+      },
+      "scenario_coverage": {
+        "requested_count": 8,
+        "requested_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "executed_count": 8,
+        "executed_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "feature_ready_count": 8,
+        "feature_ready_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "scored_count": 8,
+        "scored_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "evaluable_count": 8,
+        "evaluable_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "detected_count": 8,
+        "detected_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "insufficient_count": 8,
+        "insufficient_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "failed_count": 0,
+        "failed_scenario_ids": []
+      },
+      "truth_positive_distribution": {
+        "distribution_name": "truth_positive",
+        "count": 80,
+        "status": "defined",
+        "min": 0.077409,
+        "max": 0.943651,
+        "mean": 0.615741,
+        "median": 0.685766,
+        "p25": 0.428804,
+        "p75": 0.79151,
+        "p95": 0.943651
+      },
+      "truth_negative_distribution": {
+        "distribution_name": "truth_negative",
+        "count": 120,
+        "status": "defined",
+        "min": 0.078411,
+        "max": 0.963373,
+        "mean": 0.617016,
+        "median": 0.688194,
+        "p25": 0.280924,
+        "p75": 0.943698,
+        "p95": 0.963373
+      },
+      "predicted_positive_distribution": {
+        "distribution_name": "predicted_positive",
+        "count": 127,
+        "status": "defined",
+        "min": 0.502028,
+        "max": 0.963373,
+        "mean": 0.821851,
+        "median": 0.830531,
+        "p25": 0.688194,
+        "p75": 0.943674,
+        "p95": 0.96333
+      },
+      "predicted_negative_distribution": {
+        "distribution_name": "predicted_negative",
+        "count": 73,
+        "status": "defined",
+        "min": 0.077409,
+        "max": 0.499708,
+        "mean": 0.259262,
+        "median": 0.278372,
+        "p25": 0.23344,
+        "p75": 0.313171,
+        "p95": 0.429289
+      },
+      "scenario_evaluations": [
+        {
+          "scenario_id": "cpu-saturation",
+          "model_name": "isolation_forest",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "cpu-saturation",
+            "model_name": "isolation_forest",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.26649,
+            "max": 0.943651,
+            "mean": 0.642181,
+            "median": 0.72174,
+            "p25": 0.474967,
+            "p75": 0.79112,
+            "p95": 0.893092
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.963373,
+            "mean": 0.605129,
+            "median": 0.688194,
+            "p25": 0.279648,
+            "p75": 0.942891,
+            "p95": 0.961392
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.613458,
+            "max": 0.963373,
+            "mean": 0.823977,
+            "median": 0.811404,
+            "p25": 0.737594,
+            "p75": 0.943663,
+            "p95": 0.96125
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.428804,
+            "mean": 0.257234,
+            "median": 0.278372,
+            "p25": 0.23344,
+            "p75": 0.313171,
+            "p95": 0.383585
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "memory-exhaustion",
+          "model_name": "isolation_forest",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "memory-exhaustion",
+            "model_name": "isolation_forest",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.26649,
+            "max": 0.943651,
+            "mean": 0.642181,
+            "median": 0.72174,
+            "p25": 0.474967,
+            "p75": 0.79112,
+            "p95": 0.893092
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.963373,
+            "mean": 0.605129,
+            "median": 0.688194,
+            "p25": 0.279648,
+            "p75": 0.942891,
+            "p95": 0.961392
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.613458,
+            "max": 0.963373,
+            "mean": 0.823977,
+            "median": 0.811404,
+            "p25": 0.737594,
+            "p75": 0.943663,
+            "p95": 0.96125
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.428804,
+            "mean": 0.257234,
+            "median": 0.278372,
+            "p25": 0.23344,
+            "p75": 0.313171,
+            "p95": 0.383585
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "connection-exhaustion",
+          "model_name": "isolation_forest",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "connection-exhaustion",
+            "model_name": "isolation_forest",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.26649,
+            "max": 0.943651,
+            "mean": 0.642181,
+            "median": 0.72174,
+            "p25": 0.474967,
+            "p75": 0.79112,
+            "p95": 0.893092
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.963373,
+            "mean": 0.605129,
+            "median": 0.688194,
+            "p25": 0.279648,
+            "p75": 0.942891,
+            "p95": 0.961392
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.613458,
+            "max": 0.963373,
+            "mean": 0.823977,
+            "median": 0.811404,
+            "p25": 0.737594,
+            "p75": 0.943663,
+            "p95": 0.96125
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.428804,
+            "mean": 0.257234,
+            "median": 0.278372,
+            "p25": 0.23344,
+            "p75": 0.313171,
+            "p95": 0.383585
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "dependency-latency",
+          "model_name": "isolation_forest",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "dependency-latency",
+            "model_name": "isolation_forest",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.26649,
+            "max": 0.943651,
+            "mean": 0.642181,
+            "median": 0.72174,
+            "p25": 0.474967,
+            "p75": 0.79112,
+            "p95": 0.893092
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.963373,
+            "mean": 0.605129,
+            "median": 0.688194,
+            "p25": 0.279648,
+            "p75": 0.942891,
+            "p95": 0.961392
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.613458,
+            "max": 0.963373,
+            "mean": 0.823977,
+            "median": 0.811404,
+            "p25": 0.737594,
+            "p75": 0.943663,
+            "p95": 0.96125
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.428804,
+            "mean": 0.257234,
+            "median": 0.278372,
+            "p25": 0.23344,
+            "p75": 0.313171,
+            "p95": 0.383585
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "dependency-failure",
+          "model_name": "isolation_forest",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "dependency-failure",
+            "model_name": "isolation_forest",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.26649,
+            "max": 0.943651,
+            "mean": 0.642181,
+            "median": 0.72174,
+            "p25": 0.474967,
+            "p75": 0.79112,
+            "p95": 0.893092
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.963373,
+            "mean": 0.605129,
+            "median": 0.688194,
+            "p25": 0.279648,
+            "p75": 0.942891,
+            "p95": 0.961392
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.613458,
+            "max": 0.963373,
+            "mean": 0.823977,
+            "median": 0.811404,
+            "p25": 0.737594,
+            "p75": 0.943663,
+            "p95": 0.96125
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.428804,
+            "mean": 0.257234,
+            "median": 0.278372,
+            "p25": 0.23344,
+            "p75": 0.313171,
+            "p95": 0.383585
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "error-rate-spike",
+          "model_name": "isolation_forest",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "error-rate-spike",
+            "model_name": "isolation_forest",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.26649,
+            "max": 0.943651,
+            "mean": 0.642181,
+            "median": 0.72174,
+            "p25": 0.474967,
+            "p75": 0.79112,
+            "p95": 0.893092
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.963373,
+            "mean": 0.605129,
+            "median": 0.688194,
+            "p25": 0.279648,
+            "p75": 0.942891,
+            "p95": 0.961392
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.613458,
+            "max": 0.963373,
+            "mean": 0.823977,
+            "median": 0.811404,
+            "p25": 0.737594,
+            "p75": 0.943663,
+            "p95": 0.96125
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.428804,
+            "mean": 0.257234,
+            "median": 0.278372,
+            "p25": 0.23344,
+            "p75": 0.313171,
+            "p95": 0.383585
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "traffic-surge",
+          "model_name": "isolation_forest",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 4,
+            "false_positives": 11,
+            "true_negatives": 9,
+            "false_negatives": 6,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.266667,
+            "status": "defined",
+            "reason": null,
+            "numerator": 4.0,
+            "denominator": 15.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.4,
+            "status": "defined",
+            "reason": null,
+            "numerator": 4.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.32,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.213334,
+            "denominator": 0.666667
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.55,
+            "status": "defined",
+            "reason": null,
+            "numerator": 11.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "traffic-surge",
+            "model_name": "isolation_forest",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.077409,
+            "max": 0.90267,
+            "mean": 0.430663,
+            "median": 0.368472,
+            "p25": 0.155288,
+            "p75": 0.717964,
+            "p95": 0.870207
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.963229,
+            "mean": 0.700225,
+            "median": 0.685277,
+            "p25": 0.558156,
+            "p75": 0.942891,
+            "p95": 0.962152
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 15,
+            "status": "defined",
+            "min": 0.502028,
+            "max": 0.963229,
+            "mean": 0.805975,
+            "median": 0.830531,
+            "p25": 0.684464,
+            "p75": 0.942891,
+            "p95": 0.962152
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 10,
+            "status": "defined",
+            "min": 0.077409,
+            "max": 0.499708,
+            "mean": 0.272039,
+            "median": 0.268822,
+            "p25": 0.091228,
+            "p75": 0.430599,
+            "p95": 0.484542
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "bad-deployment-config",
+          "model_name": "isolation_forest",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "bad-deployment-config",
+            "model_name": "isolation_forest",
+            "status": "detected",
+            "latency_seconds": 2.0,
+            "first_true_positive_time": "2026-01-01T00:06:12Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:12+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.26649,
+            "max": 0.943651,
+            "mean": 0.642181,
+            "median": 0.72174,
+            "p25": 0.474967,
+            "p75": 0.79112,
+            "p95": 0.893092
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.963373,
+            "mean": 0.605129,
+            "median": 0.688194,
+            "p25": 0.279648,
+            "p75": 0.942891,
+            "p95": 0.961392
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.613458,
+            "max": 0.963373,
+            "mean": 0.823977,
+            "median": 0.811404,
+            "p25": 0.737594,
+            "p75": 0.943663,
+            "p95": 0.96125
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.078411,
+            "max": 0.428804,
+            "mean": 0.257234,
+            "median": 0.278372,
+            "p25": 0.23344,
+            "p75": 0.313171,
+            "p95": 0.383585
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "model_name": "autoencoder",
+      "model_version": "1.0.0",
+      "micro_confusion_counts": {
+        "true_positives": 52,
+        "false_positives": 72,
+        "true_negatives": 88,
+        "false_negatives": 28,
+        "total_units": 240,
+        "evaluable_units": 240,
+        "success_units": 200,
+        "insufficient_units": 40,
+        "failure_units": 0
+      },
+      "micro_precision": {
+        "metric_name": "precision",
+        "value": 0.419355,
+        "status": "defined",
+        "reason": null,
+        "numerator": 52.0,
+        "denominator": 124.0
+      },
+      "micro_recall": {
+        "metric_name": "recall",
+        "value": 0.65,
+        "status": "defined",
+        "reason": null,
+        "numerator": 52.0,
+        "denominator": 80.0
+      },
+      "micro_f1": {
+        "metric_name": "f1",
+        "value": 0.509804,
+        "status": "defined",
+        "reason": null,
+        "numerator": 0.545161,
+        "denominator": 1.069355
+      },
+      "micro_false_positive_rate": {
+        "metric_name": "false_positive_rate",
+        "value": 0.45,
+        "status": "defined",
+        "reason": null,
+        "numerator": 72.0,
+        "denominator": 160.0
+      },
+      "macro_precision": {
+        "metric_name": "macro_precision",
+        "value": 0.414062,
+        "status": "defined",
+        "reason": null,
+        "numerator": 3.3125,
+        "denominator": 8.0
+      },
+      "macro_recall": {
+        "metric_name": "macro_recall",
+        "value": 0.65,
+        "status": "defined",
+        "reason": null,
+        "numerator": 5.2,
+        "denominator": 8.0
+      },
+      "macro_f1": {
+        "metric_name": "macro_f1",
+        "value": 0.505245,
+        "status": "defined",
+        "reason": null,
+        "numerator": 4.041961000000001,
+        "denominator": 8.0
+      },
+      "macro_false_positive_rate": {
+        "metric_name": "macro_false_positive_rate",
+        "value": 0.45,
+        "status": "defined",
+        "reason": null,
+        "numerator": 3.6000000000000005,
+        "denominator": 8.0
+      },
+      "macro_contributing_scenario_count": 8,
+      "latency_summary": {
+        "total_scenario_count": 8,
+        "contributing_scenario_count": 8,
+        "missing_detection_count": 0,
+        "min_seconds": 1.0,
+        "mean_seconds": 1.0,
+        "median_seconds": 1.0,
+        "p95_seconds": 1.0,
+        "max_seconds": 1.0
+      },
+      "scenario_coverage": {
+        "requested_count": 8,
+        "requested_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "executed_count": 8,
+        "executed_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "feature_ready_count": 8,
+        "feature_ready_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "scored_count": 8,
+        "scored_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "evaluable_count": 8,
+        "evaluable_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "detected_count": 8,
+        "detected_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "insufficient_count": 8,
+        "insufficient_scenario_ids": [
+          "cpu-saturation",
+          "memory-exhaustion",
+          "connection-exhaustion",
+          "dependency-latency",
+          "dependency-failure",
+          "error-rate-spike",
+          "traffic-surge",
+          "bad-deployment-config"
+        ],
+        "failed_count": 0,
+        "failed_scenario_ids": []
+      },
+      "truth_positive_distribution": {
+        "distribution_name": "truth_positive",
+        "count": 80,
+        "status": "defined",
+        "min": 0.0,
+        "max": 0.9449,
+        "mean": 0.575672,
+        "median": 0.67795,
+        "p25": 0.440588,
+        "p75": 0.798048,
+        "p95": 0.9449
+      },
+      "truth_negative_distribution": {
+        "distribution_name": "truth_negative",
+        "count": 120,
+        "status": "defined",
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.593379,
+        "median": 0.794717,
+        "p25": 0.173856,
+        "p75": 0.912349,
+        "p95": 1.0
+      },
+      "predicted_positive_distribution": {
+        "distribution_name": "predicted_positive",
+        "count": 124,
+        "status": "defined",
+        "min": 0.568832,
+        "max": 1.0,
+        "mean": 0.830222,
+        "median": 0.877214,
+        "p25": 0.771021,
+        "p75": 0.914537,
+        "p95": 1.0
+      },
+      "predicted_negative_distribution": {
+        "distribution_name": "predicted_negative",
+        "count": 76,
+        "status": "defined",
+        "min": 0.0,
+        "max": 0.497099,
+        "mean": 0.188313,
+        "median": 0.172814,
+        "p25": 0.0,
+        "p75": 0.242592,
+        "p95": 0.497099
+      },
+      "scenario_evaluations": [
+        {
+          "scenario_id": "cpu-saturation",
+          "model_name": "autoencoder",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "cpu-saturation",
+            "model_name": "autoencoder",
+            "status": "detected",
+            "latency_seconds": 1.0,
+            "first_true_positive_time": "2026-01-01T00:06:11Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:11+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.9449,
+            "mean": 0.604293,
+            "median": 0.697507,
+            "p25": 0.515032,
+            "p75": 0.795788,
+            "p95": 0.914441
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.591394,
+            "median": 0.794717,
+            "p25": 0.208224,
+            "p75": 0.911849,
+            "p95": 0.9639
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.568832,
+            "max": 1.0,
+            "mean": 0.829674,
+            "median": 0.837631,
+            "p25": 0.771021,
+            "p75": 0.912896,
+            "p95": 0.961322
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.497099,
+            "mean": 0.182118,
+            "median": 0.172814,
+            "p25": 0.0,
+            "p75": 0.242592,
+            "p95": 0.460581
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "memory-exhaustion",
+          "model_name": "autoencoder",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "memory-exhaustion",
+            "model_name": "autoencoder",
+            "status": "detected",
+            "latency_seconds": 1.0,
+            "first_true_positive_time": "2026-01-01T00:06:11Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:11+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.9449,
+            "mean": 0.604293,
+            "median": 0.697507,
+            "p25": 0.515032,
+            "p75": 0.795788,
+            "p95": 0.914441
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.591394,
+            "median": 0.794717,
+            "p25": 0.208224,
+            "p75": 0.911849,
+            "p95": 0.9639
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.568832,
+            "max": 1.0,
+            "mean": 0.829674,
+            "median": 0.837631,
+            "p25": 0.771021,
+            "p75": 0.912896,
+            "p95": 0.961322
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.497099,
+            "mean": 0.182118,
+            "median": 0.172814,
+            "p25": 0.0,
+            "p75": 0.242592,
+            "p95": 0.460581
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "connection-exhaustion",
+          "model_name": "autoencoder",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "connection-exhaustion",
+            "model_name": "autoencoder",
+            "status": "detected",
+            "latency_seconds": 1.0,
+            "first_true_positive_time": "2026-01-01T00:06:11Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:11+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.9449,
+            "mean": 0.604293,
+            "median": 0.697507,
+            "p25": 0.515032,
+            "p75": 0.795788,
+            "p95": 0.914441
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.591394,
+            "median": 0.794717,
+            "p25": 0.208224,
+            "p75": 0.911849,
+            "p95": 0.9639
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.568832,
+            "max": 1.0,
+            "mean": 0.829674,
+            "median": 0.837631,
+            "p25": 0.771021,
+            "p75": 0.912896,
+            "p95": 0.961322
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.497099,
+            "mean": 0.182118,
+            "median": 0.172814,
+            "p25": 0.0,
+            "p75": 0.242592,
+            "p95": 0.460581
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "dependency-latency",
+          "model_name": "autoencoder",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "dependency-latency",
+            "model_name": "autoencoder",
+            "status": "detected",
+            "latency_seconds": 1.0,
+            "first_true_positive_time": "2026-01-01T00:06:11Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:11+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.9449,
+            "mean": 0.604293,
+            "median": 0.697507,
+            "p25": 0.515032,
+            "p75": 0.795788,
+            "p95": 0.914441
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.591394,
+            "median": 0.794717,
+            "p25": 0.208224,
+            "p75": 0.911849,
+            "p95": 0.9639
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.568832,
+            "max": 1.0,
+            "mean": 0.829674,
+            "median": 0.837631,
+            "p25": 0.771021,
+            "p75": 0.912896,
+            "p95": 0.961322
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.497099,
+            "mean": 0.182118,
+            "median": 0.172814,
+            "p25": 0.0,
+            "p75": 0.242592,
+            "p95": 0.460581
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "dependency-failure",
+          "model_name": "autoencoder",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "dependency-failure",
+            "model_name": "autoencoder",
+            "status": "detected",
+            "latency_seconds": 1.0,
+            "first_true_positive_time": "2026-01-01T00:06:11Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:11+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.9449,
+            "mean": 0.604293,
+            "median": 0.697507,
+            "p25": 0.515032,
+            "p75": 0.795788,
+            "p95": 0.914441
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.591394,
+            "median": 0.794717,
+            "p25": 0.208224,
+            "p75": 0.911849,
+            "p95": 0.9639
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.568832,
+            "max": 1.0,
+            "mean": 0.829674,
+            "median": 0.837631,
+            "p25": 0.771021,
+            "p75": 0.912896,
+            "p95": 0.961322
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.497099,
+            "mean": 0.182118,
+            "median": 0.172814,
+            "p25": 0.0,
+            "p75": 0.242592,
+            "p95": 0.460581
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "error-rate-spike",
+          "model_name": "autoencoder",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "error-rate-spike",
+            "model_name": "autoencoder",
+            "status": "detected",
+            "latency_seconds": 1.0,
+            "first_true_positive_time": "2026-01-01T00:06:11Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:11+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.9449,
+            "mean": 0.604293,
+            "median": 0.697507,
+            "p25": 0.515032,
+            "p75": 0.795788,
+            "p95": 0.914441
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.591394,
+            "median": 0.794717,
+            "p25": 0.208224,
+            "p75": 0.911849,
+            "p95": 0.9639
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.568832,
+            "max": 1.0,
+            "mean": 0.829674,
+            "median": 0.837631,
+            "p25": 0.771021,
+            "p75": 0.912896,
+            "p95": 0.961322
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.497099,
+            "mean": 0.182118,
+            "median": 0.172814,
+            "p25": 0.0,
+            "p75": 0.242592,
+            "p95": 0.460581
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "traffic-surge",
+          "model_name": "autoencoder",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 3,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 7,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.25,
+            "status": "defined",
+            "reason": null,
+            "numerator": 3.0,
+            "denominator": 12.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.3,
+            "status": "defined",
+            "reason": null,
+            "numerator": 3.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.272727,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.15,
+            "denominator": 0.55
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "traffic-surge",
+            "model_name": "autoencoder",
+            "status": "detected",
+            "latency_seconds": 1.0,
+            "first_true_positive_time": "2026-01-01T00:06:11Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:11+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.150814,
+            "max": 0.796618,
+            "mean": 0.375326,
+            "median": 0.306722,
+            "p25": 0.168792,
+            "p75": 0.539955,
+            "p95": 0.741752
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.607276,
+            "median": 0.801105,
+            "p25": 0.241262,
+            "p75": 0.913443,
+            "p95": 0.964557
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 12,
+            "status": "defined",
+            "min": 0.56907,
+            "max": 1.0,
+            "mean": 0.835336,
+            "median": 0.910541,
+            "p25": 0.766137,
+            "p75": 0.922194,
+            "p95": 0.972152
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 13,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.492816,
+            "mean": 0.218336,
+            "median": 0.168213,
+            "p25": 0.150814,
+            "p75": 0.322427,
+            "p95": 0.468693
+          },
+          "status": "completed"
+        },
+        {
+          "scenario_id": "bad-deployment-config",
+          "model_name": "autoencoder",
+          "model_version": "1.0.0",
+          "confusion_counts": {
+            "true_positives": 7,
+            "false_positives": 9,
+            "true_negatives": 11,
+            "false_negatives": 3,
+            "total_units": 30,
+            "evaluable_units": 30,
+            "success_units": 25,
+            "insufficient_units": 5,
+            "failure_units": 0
+          },
+          "precision": {
+            "metric_name": "precision",
+            "value": 0.4375,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 16.0
+          },
+          "recall": {
+            "metric_name": "recall",
+            "value": 0.7,
+            "status": "defined",
+            "reason": null,
+            "numerator": 7.0,
+            "denominator": 10.0
+          },
+          "f1": {
+            "metric_name": "f1",
+            "value": 0.538462,
+            "status": "defined",
+            "reason": null,
+            "numerator": 0.6125,
+            "denominator": 1.1375
+          },
+          "false_positive_rate": {
+            "metric_name": "false_positive_rate",
+            "value": 0.45,
+            "status": "defined",
+            "reason": null,
+            "numerator": 9.0,
+            "denominator": 20.0
+          },
+          "detection_latency": {
+            "scenario_id": "bad-deployment-config",
+            "model_name": "autoencoder",
+            "status": "detected",
+            "latency_seconds": 1.0,
+            "first_true_positive_time": "2026-01-01T00:06:11Z",
+            "truth_activation_time": "2026-01-01T00:06:10Z",
+            "details": "First true positive detected at 2026-01-01T00:06:11+00:00"
+          },
+          "truth_positive_distribution": {
+            "distribution_name": "truth_positive",
+            "count": 10,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.9449,
+            "mean": 0.604293,
+            "median": 0.697507,
+            "p25": 0.515032,
+            "p75": 0.795788,
+            "p95": 0.914441
+          },
+          "truth_negative_distribution": {
+            "distribution_name": "truth_negative",
+            "count": 15,
+            "status": "defined",
+            "min": 0.0,
+            "max": 1.0,
+            "mean": 0.591394,
+            "median": 0.794717,
+            "p25": 0.208224,
+            "p75": 0.911849,
+            "p95": 0.9639
+          },
+          "predicted_positive_distribution": {
+            "distribution_name": "predicted_positive",
+            "count": 16,
+            "status": "defined",
+            "min": 0.568832,
+            "max": 1.0,
+            "mean": 0.829674,
+            "median": 0.837631,
+            "p25": 0.771021,
+            "p75": 0.912896,
+            "p95": 0.961322
+          },
+          "predicted_negative_distribution": {
+            "distribution_name": "predicted_negative",
+            "count": 9,
+            "status": "defined",
+            "min": 0.0,
+            "max": 0.497099,
+            "mean": 0.182118,
+            "median": 0.172814,
+            "p25": 0.0,
+            "p75": 0.242592,
+            "p95": 0.460581
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "calibration_cutoff": "2026-01-01T00:05:00Z",
+    "evaluation_start": "2026-01-01T00:06:00Z",
+    "calibration_runs": [
+      {
+        "scenario_id": "cpu-saturation",
+        "run_id": "f183354c-b40f-50c4-aa53-7686a8061bb0",
+        "seed": 41
+      },
+      {
+        "scenario_id": "memory-exhaustion",
+        "run_id": "05d76f46-f154-5965-bae8-c03cab8177ce",
+        "seed": 41
+      },
+      {
+        "scenario_id": "connection-exhaustion",
+        "run_id": "fcc68e7e-d3d2-55b4-aa22-088f48ef4980",
+        "seed": 41
+      },
+      {
+        "scenario_id": "dependency-latency",
+        "run_id": "bcfc6cff-994e-5ece-8c3c-64b059368314",
+        "seed": 41
+      },
+      {
+        "scenario_id": "dependency-failure",
+        "run_id": "73505a0c-18c3-5e74-be48-896b4c9f8f1c",
+        "seed": 41
+      },
+      {
+        "scenario_id": "error-rate-spike",
+        "run_id": "48faf76f-e2cf-5dfb-ad20-604bf4b05711",
+        "seed": 41
+      },
+      {
+        "scenario_id": "traffic-surge",
+        "run_id": "e1243bef-c393-5599-b1e6-bf8e0b005f6f",
+        "seed": 41
+      },
+      {
+        "scenario_id": "bad-deployment-config",
+        "run_id": "50d6320a-4c50-57fa-89b3-dde3b9a554dd",
+        "seed": 41
+      }
+    ],
+    "evaluation_runs": [
+      {
+        "scenario_id": "cpu-saturation",
+        "run_id": "11f3e022-a80d-5004-a515-3ec253f4d6c8",
+        "seed": 42
+      },
+      {
+        "scenario_id": "memory-exhaustion",
+        "run_id": "6255f42c-6b1e-5c7e-8df0-df20e70a974d",
+        "seed": 42
+      },
+      {
+        "scenario_id": "connection-exhaustion",
+        "run_id": "6d70071a-6cd2-59f0-92b2-297404ca655c",
+        "seed": 42
+      },
+      {
+        "scenario_id": "dependency-latency",
+        "run_id": "c3d2ae76-0170-57d5-8986-e05391c7c9cd",
+        "seed": 42
+      },
+      {
+        "scenario_id": "dependency-failure",
+        "run_id": "3a575a9c-62ab-5a97-895f-8e81cdebe35f",
+        "seed": 42
+      },
+      {
+        "scenario_id": "error-rate-spike",
+        "run_id": "40c85108-992a-5b8c-8ccf-aaa867df118d",
+        "seed": 42
+      },
+      {
+        "scenario_id": "traffic-surge",
+        "run_id": "761159f6-5722-549e-aa87-80b0ced0e580",
+        "seed": 42
+      },
+      {
+        "scenario_id": "bad-deployment-config",
+        "run_id": "dee90965-327d-536b-b1e2-1850979314ac",
+        "seed": 42
+      }
+    ],
+    "package_id": "phase3-task-3-9-comparison",
+    "package_version": "1.0.0",
+    "code_revision": "481652c2047a59e697c3008115da0faefcbbde01",
+    "created_at": "2026-10-05T14:28:57.467379+00:00",
+    "environment": "simulation",
+    "artifact_root": "research",
+    "calibration_seed": 41,
+    "evaluation_seed": 42,
+    "calibration_partition_id": "partition-calibration-seed-41",
+    "evaluation_partition_id": "partition-evaluation-seed-42",
+    "calibration_cutoff_seconds": 300.0,
+    "decision_policy": {
+      "policy_name": "warning_threshold_binary_decision",
+      "policy_version": "1.0.0",
+      "decision_threshold": 0.5,
+      "description": "Calibrated anomaly score >= decision_threshold (WARNING, ERROR, or CRITICAL) is comparison-positive"
+    },
+    "label_policy": {
+      "policy_name": "half_open_active_interval",
+      "policy_version": "1.0.0",
+      "overlap_rule": "window_start_in_active_interval",
+      "description": "Ground truth positive when window_start falls in [truth_start, truth_end), pre-activation and post-recovery are ground truth negative"
+    },
+    "feature_window": {
+      "feature_config_id": "feat-cfg-canonical-v1",
+      "feature_names": [
+        "http_request_duration_ms:mean",
+        "http_requests_total:mean"
+      ],
+      "window_size_seconds": 1.0,
+      "step_size_seconds": 1.0,
+      "aggregation_methods": [
+        "mean",
+        "p95",
+        "std"
+      ],
+      "imputation_strategy": "forward_fill"
+    },
+    "calibration_config": {
+      "schema_version": "1.0",
+      "calibration_method": "empirical_cdf_percentile",
+      "calibration_method_version": "1.0.0",
+      "supported_models": [
+        "prophet",
+        "isolation_forest",
+        "autoencoder"
+      ],
+      "min_calibration_samples_per_model": 10,
+      "calibration_reference_id": "calib-ref-v1",
+      "calibration_reference_version": "1.0.0",
+      "calibration_split_rule": "independent_reference_set",
+      "calibration_split_version": "1.0.0",
+      "tie_handling_rule": "average",
+      "interpolation_rule": "linear",
+      "clipping_policy": "clamp_0_1",
+      "missing_calibration_policy": "error",
+      "degenerate_distribution_policy": "center_or_zero",
+      "severity_mapping_version": "1.0.0",
+      "severity_thresholds": {
+        "info_threshold": 0.2,
+        "warning_threshold": 0.5,
+        "error_threshold": 0.75,
+        "critical_threshold": 0.9
+      }
+    },
+    "scenario_ids": [
+      "cpu-saturation",
+      "memory-exhaustion",
+      "connection-exhaustion",
+      "dependency-latency",
+      "dependency-failure",
+      "error-rate-spike",
+      "traffic-surge",
+      "bad-deployment-config"
+    ],
+    "model_names": [
+      "prophet",
+      "isolation_forest",
+      "autoencoder"
+    ],
+    "canonical_scenario_order": [
+      "cpu-saturation",
+      "memory-exhaustion",
+      "connection-exhaustion",
+      "dependency-latency",
+      "dependency-failure",
+      "error-rate-spike",
+      "traffic-surge",
+      "bad-deployment-config"
+    ],
+    "canonical_model_order": [
+      "prophet",
+      "isolation_forest",
+      "autoencoder"
+    ]
+  }
+}

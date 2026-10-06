@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "db526495-d6d5-5f2f-b59d-fe197a43cee4",
+  "name": "prophet-canonical-evaluation",
+  "description": "Phase 3 Prophet baseline evaluation across canonical simulator scenarios",
+  "dataset": {
+    "dataset_id": "canonical-simulator-v1",
+    "dataset_version": "1.0.0",
+    "dataset_split": "evaluation",
+    "location_reference": "research/results/raw/phase3/task_3_9/evaluation_outcomes.jsonl"
+  },
+  "scenario": {
+    "scenario_id": "all-canonical-scenarios",
+    "scenario_version": "1.0.0",
+    "config_reference": "app/simulator/scenarios/catalogue.py"
+  },
+  "reproducibility": {
+    "seed": 42,
+    "code_revision": "481652c2047a59e697c3008115da0faefcbbde01",
+    "environment": "simulation",
+    "reproducibility_key": null,
+    "conditions": {
+      "calibration_seed": 41,
+      "evaluation_seed": 42
+    }
+  },
+  "feature_window": {
+    "feature_config_id": "feat-cfg-canonical-v1",
+    "feature_names": [
+      "http_request_duration_ms:mean",
+      "http_requests_total:mean"
+    ],
+    "window_size_seconds": 1.0,
+    "step_size_seconds": 1.0,
+    "aggregation_methods": [
+      "mean",
+      "p95",
+      "std"
+    ],
+    "imputation_strategy": "forward_fill"
+  },
+  "model": {
+    "model_name": "prophet",
+    "model_version": "1.0.0",
+    "hyperparameters": {},
+    "calibration_method": "empirical_cdf_percentile",
+    "calibration_version": "1.0.0",
+    "calibration_parameters": {}
+  },
+  "evaluation": {
+    "requested_metrics": [
+      "precision",
+      "recall",
+      "f1",
+      "false_positive_rate",
+      "detection_latency"
+    ],
+    "target_service": "canonical-topology",
+    "ground_truth_reference": "app/simulator/ground_truth"
+  },
+  "outputs": {
+    "artifact_root": "research/results/processed/phase3/task_3_9",
+    "requested_outputs": [
+      "model_comparison.json",
+      "model_comparison.csv"
+    ],
+    "save_intermediate_features": false
+  },
+  "metadata": {}
+}

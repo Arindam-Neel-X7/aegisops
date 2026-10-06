@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0",
+  "package_id": "phase3-task-3-9-comparison",
+  "package_version": "1.0.0",
+  "code_revision": "481652c2047a59e697c3008115da0faefcbbde01",
+  "created_at": "2026-10-05T14:28:57.467379Z",
+  "environment": "simulation",
+  "calibration_seed": 41,
+  "evaluation_seed": 42,
+  "decision_threshold": 0.5,
+  "models": [
+    "prophet",
+    "isolation_forest",
+    "autoencoder"
+  ],
+  "scenarios": [
+    "cpu-saturation",
+    "memory-exhaustion",
+    "connection-exhaustion",
+    "dependency-latency",
+    "dependency-failure",
+    "error-rate-spike",
+    "traffic-surge",
+    "bad-deployment-config"
+  ],
+  "artifact_manifest_path": "research/results/processed/phase3/task_3_9/artifact_manifest.json",
+  "self_digest_policy": "excluded_from_manifest_digest",
+  "artifacts": [
+    {
+      "path": "research/experiments/phase3/task_3_9/comparison_manifest.json",
+      "media_type": "application/json",
+      "schema_version": "1.0",
+      "record_count": null,
+      "sha256": "058ba566ab9ad281c695698380e2f49af490e0c37443dad5264cb21e4eddd3ae"
+    },
+    {
+      "path": "research/experiments/phase3/task_3_9/prophet_experiment.json",
+      "media_type": "application/json",
+      "schema_version": "1.0",
+      "record_count": null,
+      "sha256": "4d6255e8175e43e74e8158fdf3bc0f18cfa2f234a23d148d5259b9ac573a0f62"
+    },
+    {
+      "path": "research/experiments/phase3/task_3_9/isolation_forest_experiment.json",
+      "media_type": "application/json",
+      "schema_version": "1.0",
+      "record_count": null,
+      "sha256": "e807ef3613f2de0f0d0cb6999d1f57d486c2dc8bfbd1721fb07cf876706ccd7d"
+    },
+    {
+      "path": "research/experiments/phase3/task_3_9/autoencoder_experiment.json",
+      "media_type": "application/json",
+      "schema_version": "1.0",
+      "record_count": null,
+      "sha256": "d863a3858fad04bf6687fac871029f5baf568e7c1cb512dc9c71af0998316d88"
+    },
+    {
+      "path": "research/results/raw/phase3/task_3_9/evaluation_outcomes.jsonl",
+      "media_type": "application/x-ndjson",
+      "schema_version": "1.0",
+      "record_count": 720,
+      "sha256": "dbce32f532277413c5af117767d733d2945a12573fdd56c0032677a7c86e8d91"
+    },
+    {
+      "path": "research/results/processed/phase3/task_3_9/model_comparison.json",
+      "media_type": "application/json",
+      "schema_version": "1.0",
+      "record_count": 3,
+      "sha256": "96e286a54f947a3429d949ec66721f24ecd51f66b26b2e957ce740394fc569f6"
+    },
+    {
+      "path": "research/results/processed/phase3/task_3_9/model_comparison.csv",
+      "media_type": "text/csv",
+      "schema_version": "1.0",
+      "record_count": 3,
+      "sha256": "6db8df2f265469b59081a3f1692802de31af49f4d89ee396114ea3b923898812"
+    },
+    {
+      "path": "research/results/processed/phase3/task_3_9/scenario_comparison.csv",
+      "media_type": "text/csv",
+      "schema_version": "1.0",
+      "record_count": 24,
+      "sha256": "3cd1e3ae323d27ae333636fb592dc389575f85c7443d58a02b9e8fb7046c9f3e"
+    },
+    {
+      "path": "research/results/figures/phase3/task_3_9/model_quality_metrics.svg",
+      "media_type": "image/svg+xml",
+      "schema_version": "1.0",
+      "record_count": null,
+      "sha256": "8c52780cff6d2b87649422df935be60dab9fc928477fc9c67ce6f8032c67cb62"
+    },
+    {
+      "path": "research/results/figures/phase3/task_3_9/detection_latency_by_scenario.svg",
+      "media_type": "image/svg+xml",
+      "schema_version": "1.0",
+      "record_count": null,
+      "sha256": "95ef62163405b3696150f7fe23f031ab702b2040f914d61d00492c885cffa7b1"
+    },
+    {
+      "path": "research/reports/phase3/task_3_9/evaluation_report.md",
+      "media_type": "text/markdown",
+      "schema_version": "1.0",
+      "record_count": null,
+      "sha256": "8b0212c1f89d54a19847478834f899e21b1a0ae4f2fdfe2082e9f97c91daa0e1"
+    }
+  ]
+}

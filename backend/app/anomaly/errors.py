@@ -22,11 +22,15 @@ class AnomalyExperimentValidationError(AnomalyValidationError, AnomalyExperiment
     """Raised when an AnomalyExperimentConfig fails validation."""
 
 
-class AnomalyExperimentSerializationError(AnomalySerializationError, AnomalyExperimentError):
+class AnomalyExperimentSerializationError(
+    AnomalySerializationError, AnomalyExperimentError
+):
     """Raised when serializing an AnomalyExperimentConfig fails."""
 
 
-class AnomalyExperimentDeserializationError(AnomalyDeserializationError, AnomalyExperimentError):
+class AnomalyExperimentDeserializationError(
+    AnomalyDeserializationError, AnomalyExperimentError
+):
     """Raised when deserializing an AnomalyExperimentConfig fails."""
 
 
@@ -78,7 +82,9 @@ class IsolationForestFitError(IsolationForestError):
     """Raised when Isolation Forest model fitting or scoring fails."""
 
 
-class IsolationForestInsufficientHistoryError(IsolationForestError, InsufficientDataError):
+class IsolationForestInsufficientHistoryError(
+    IsolationForestError, InsufficientDataError
+):
     """Raised when training history is insufficient to fit Isolation Forest baseline."""
 
 
@@ -116,3 +122,19 @@ class CalibrationReferenceError(CalibrationError):
 
 class MissingCalibrationError(CalibrationError):
     """Raised when calibration is requested for a model lacking fitted calibration parameters."""
+
+
+class EvaluationError(AnomalyError):
+    """Base exception for anomaly evaluation errors."""
+
+
+class EvaluationConfigurationError(EvaluationError, AnomalyValidationError):
+    """Raised when evaluation configuration fails contract validation."""
+
+
+class EvaluationExecutionError(EvaluationError):
+    """Raised when evaluation pipeline execution fails."""
+
+
+class EvaluationArtifactError(EvaluationError):
+    """Raised when evaluation artifacts cannot be read or written."""
