@@ -44,6 +44,8 @@ from app.anomaly.errors import (
     AnomalyExperimentSerializationError,
     AnomalyExperimentValidationError,
     AnomalyFeatureError,
+    AnomalyHandoffError,
+    AnomalyPublicationError,
     AnomalySerializationError,
     AnomalyValidationError,
     AutoencoderArtifactError,
@@ -96,6 +98,9 @@ from app.anomaly.features import (
     observations_from_scenario_result,
     observations_from_telemetry_events,
 )
+from app.anomaly.handoff import (
+    anomaly_signal_from_envelope,
+)
 from app.anomaly.isolation_forest import (
     MAX_UINT32,
     SUPPORTED_IF_CONFIG_SCHEMA_VERSION,
@@ -121,6 +126,9 @@ from app.anomaly.prophet import (
     ProphetScoreResult,
     ProphetScoreStatus,
     run_prophet_baseline,
+)
+from app.anomaly.publisher import (
+    AnomalySignalPublisher,
 )
 from app.anomaly.serialization import (
     ANOMALY_EVENT_TYPE,
@@ -160,8 +168,11 @@ __all__ = [
     "AnomalyExperimentSerializationError",
     "AnomalyExperimentValidationError",
     "AnomalyFeatureError",
+    "AnomalyHandoffError",
+    "AnomalyPublicationError",
     "AnomalySerializationError",
     "AnomalySignal",
+    "AnomalySignalPublisher",
     "AnomalyValidationError",
     "AutoencoderArtifact",
     "AutoencoderArtifactError",
@@ -223,6 +234,7 @@ __all__ = [
     "ScenarioReference",
     "SeverityThresholdsConfig",
     "WindowingError",
+    "anomaly_signal_from_envelope",
     "calibration_input_from_autoencoder",
     "calibration_input_from_isolation_forest",
     "calibration_input_from_prophet",

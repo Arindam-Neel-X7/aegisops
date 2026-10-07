@@ -1,3 +1,6 @@
+import uuid
+
+
 class AnomalyError(Exception):
     """Base exception for anomaly module errors."""
 
@@ -138,3 +141,25 @@ class EvaluationExecutionError(EvaluationError):
 
 class EvaluationArtifactError(EvaluationError):
     """Raised when evaluation artifacts cannot be read or written."""
+
+
+class AnomalyPublicationError(AnomalyError):
+    """Raised when an anomaly signal cannot be published."""
+
+    def __init__(
+        self,
+        *,
+        signal_id: uuid.UUID,
+        run_id: uuid.UUID,
+        scenario_id: str,
+        cause: Exception,
+    ) -> None:
+        super().__init__("Failed to publish anomaly signal")
+        self.signal_id = signal_id
+        self.run_id = run_id
+        self.scenario_id = scenario_id
+        self.cause = cause
+
+
+class AnomalyHandoffError(AnomalyError):
+    """Raised when a consumed anomaly envelope violates the Phase 4 handoff contract."""
