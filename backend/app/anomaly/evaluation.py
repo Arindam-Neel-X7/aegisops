@@ -67,12 +67,21 @@ from app.anomaly.isolation_forest import (
     IsolationForestScoreStatus,
 )
 from app.anomaly.models import MAX_UINT64
+from app.anomaly.models import AnomalySignal
+from app.anomaly.observability import (
+    FailureCategory,
+    FailureRecord,
+    ObservabilityCollector,
+    ObservabilityContext,
+    OperationalStage,
+)
 from app.anomaly.prophet import (
     ProphetBaseline,
     ProphetBaselineConfig,
     ProphetScoreStatus,
 )
 from app.simulator.runtime.runner import ScenarioRunner
+from app.simulator.runtime.result import ScenarioRunResult
 from app.telemetry.schemas import EventSeverity
 
 SUPPORTED_EVALUATION_SCHEMA_VERSION = "1.0"
@@ -2019,8 +2028,56 @@ def calculate_detection_latency(
 class Phase3EvaluationHarness:
     """Deterministic orchestrator for Phase 3 baseline evaluation across canonical scenarios."""
 
-    def __init__(self, config: EvaluationHarnessConfig) -> None:
+    def __init__(
+        self,
+        config: EvaluationHarnessConfig,
+        observability: ObservabilityCollector | None = None,
+    ) -> None:
         self.config = config
+        self.observability = observability or ObservabilityCollector()
+
+    def _observability_context(
+        self,
+        run_result: ScenarioRunResult | None = None,
+        *,
+        model_name: str | None = None,
+        model_version: str | None = None,
+        signal_id: uuid.UUID | None = None,
+    ) -> ObservabilityContext:
+        return ObservabilityContext(
+            run_id=run_result.run_id if run_result else None,
+            scenario_id=run_result.scenario_id if run_result else None,
+            scenario_version=run_result.scenario_version if run_result else None,
+            seed=run_result.seed if run_result else None,
+            reproducibility_key=(
+                run_result.reproducibility_key if run_result else None
+            ),
+            package_id=self.config.package_id,
+            package_version=self.config.package_version,
+            code_revision=self.config.code_revision,
+            model_name=model_name,
+            model_version=model_version,
+            signal_id=signal_id,
+        )
+
+    def _record_semantic_failure(
+        self,
+        *,
+        category: FailureCategory,
+        failure_type: str,
+        failure_message: str,
+        context: ObservabilityContext,
+    ) -> None:
+        self.observability.record_failure(
+            FailureRecord(
+                stage=OperationalStage.EVALUATION,
+                category=category,
+                failure_type=failure_type,
+                failure_message=failure_message,
+                observed_at=datetime.now(timezone.utc),
+                context=context,
+            )
+        )
 
     async def run_evaluation(
         self,
@@ -2067,14 +2124,30 @@ class Phase3EvaluationHarness:
             )
 
             # Extract features for calibration
-            calib_feat_res = extract_features(
-                calib_run_result,
-                config=self.config.feature_window,
+            calib_context = self._observability_context(calib_run_result)
+            calib_feat_res = self.observability.sync_measured_call(
+                OperationalStage.FEATURE_EXTRACTION,
+                FailureCategory.FEATURE_EXTRACTION_FAILURE,
+                calib_context,
+                action=lambda: extract_features(
+                    calib_run_result,
+                    config=self.config.feature_window,
+                ),
             )
 
             # Score Prophet on calibration
             p_baseline = ProphetBaseline(config=self.config.prophet_config)
-            p_scores = p_baseline.score_series(calib_feat_res, start_index=0)
+            p_context = self._observability_context(
+                calib_run_result,
+                model_name="prophet",
+                model_version=self.config.prophet_config.model_version,
+            )
+            p_scores = self.observability.sync_measured_call(
+                OperationalStage.MODEL_EXECUTION,
+                FailureCategory.MODEL_FAILURE,
+                p_context,
+                action=lambda: p_baseline.score_series(calib_feat_res, start_index=0),
+            )
             for idx, p_res in enumerate(p_scores):
                 if (
                     p_res.status == ProphetScoreStatus.SUCCESS
@@ -2113,7 +2186,17 @@ class Phase3EvaluationHarness:
             if_baseline = IsolationForestBaseline(
                 config=self.config.isolation_forest_config
             )
-            if_scores = if_baseline.score_series(calib_feat_res, start_index=0)
+            if_context = self._observability_context(
+                calib_run_result,
+                model_name="isolation_forest",
+                model_version=self.config.isolation_forest_config.model_version,
+            )
+            if_scores = self.observability.sync_measured_call(
+                OperationalStage.MODEL_EXECUTION,
+                FailureCategory.MODEL_FAILURE,
+                if_context,
+                action=lambda: if_baseline.score_series(calib_feat_res, start_index=0),
+            )
             for idx, if_res in enumerate(if_scores):
                 if (
                     if_res.status == IsolationForestScoreStatus.SUCCESS
@@ -2150,7 +2233,17 @@ class Phase3EvaluationHarness:
 
             # Score Autoencoder on calibration
             ae_baseline = AutoencoderBaseline(config=self.config.autoencoder_config)
-            ae_scores = ae_baseline.score_series(calib_feat_res, start_index=0)
+            ae_context = self._observability_context(
+                calib_run_result,
+                model_name="autoencoder",
+                model_version=self.config.autoencoder_config.model_version,
+            )
+            ae_scores = self.observability.sync_measured_call(
+                OperationalStage.MODEL_EXECUTION,
+                FailureCategory.MODEL_FAILURE,
+                ae_context,
+                action=lambda: ae_baseline.score_series(calib_feat_res, start_index=0),
+            )
             for idx, ae_res in enumerate(ae_scores):
                 if (
                     ae_res.status == AutoencoderScoreStatus.SUCCESS
@@ -2220,7 +2313,12 @@ class Phase3EvaluationHarness:
         ]
 
         calibrator = CommonScoreCalibrator(config=self.config.calibration_config)
-        calibrator.fit_reference_data(ref_datasets)
+        self.observability.sync_measured_call(
+            OperationalStage.CALIBRATION,
+            FailureCategory.CALIBRATION_FAILURE,
+            self._observability_context(),
+            action=lambda: calibrator.fit_reference_data(ref_datasets),
+        )
 
         # 2. Evaluation Phase (Seed 42)
         t_eval_start = t_calib_start + timedelta(
@@ -2267,9 +2365,15 @@ class Phase3EvaluationHarness:
             )
 
             # Common extracted features across all 3 models
-            feat_res = extract_features(
-                eval_run_result,
-                config=self.config.feature_window,
+            eval_context = self._observability_context(eval_run_result)
+            feat_res = self.observability.sync_measured_call(
+                OperationalStage.FEATURE_EXTRACTION,
+                FailureCategory.FEATURE_EXTRACTION_FAILURE,
+                eval_context,
+                action=lambda: extract_features(
+                    eval_run_result,
+                    config=self.config.feature_window,
+                ),
             )
 
             # Generate EvaluationUnits
@@ -2303,7 +2407,17 @@ class Phase3EvaluationHarness:
             # Run and evaluate each of the 3 models on the common windows
             # Model 1: Prophet
             p_baseline = ProphetBaseline(config=self.config.prophet_config)
-            p_scores = p_baseline.score_series(feat_res, start_index=0)
+            p_context = self._observability_context(
+                eval_run_result,
+                model_name="prophet",
+                model_version=self.config.prophet_config.model_version,
+            )
+            p_scores = self.observability.sync_measured_call(
+                OperationalStage.MODEL_EXECUTION,
+                FailureCategory.MODEL_FAILURE,
+                p_context,
+                action=lambda: p_baseline.score_series(feat_res, start_index=0),
+            )
             p_outcomes = self._evaluate_model_scores(
                 model_name="prophet",
                 model_version=self.config.prophet_config.model_version,
@@ -2313,6 +2427,7 @@ class Phase3EvaluationHarness:
                 score_converter=lambda res: calibration_input_from_prophet(
                     res, self.config.prophet_config
                 ),
+                context=p_context,
             )
             all_outcomes.extend(p_outcomes)
             scenario_model_evaluations["prophet"].append(
@@ -2329,7 +2444,17 @@ class Phase3EvaluationHarness:
             if_baseline = IsolationForestBaseline(
                 config=self.config.isolation_forest_config
             )
-            if_scores = if_baseline.score_series(feat_res, start_index=0)
+            if_context = self._observability_context(
+                eval_run_result,
+                model_name="isolation_forest",
+                model_version=self.config.isolation_forest_config.model_version,
+            )
+            if_scores = self.observability.sync_measured_call(
+                OperationalStage.MODEL_EXECUTION,
+                FailureCategory.MODEL_FAILURE,
+                if_context,
+                action=lambda: if_baseline.score_series(feat_res, start_index=0),
+            )
             if_outcomes = self._evaluate_model_scores(
                 model_name="isolation_forest",
                 model_version=self.config.isolation_forest_config.model_version,
@@ -2339,6 +2464,7 @@ class Phase3EvaluationHarness:
                 score_converter=lambda res: calibration_input_from_isolation_forest(
                     res, self.config.isolation_forest_config
                 ),
+                context=if_context,
             )
             all_outcomes.extend(if_outcomes)
             scenario_model_evaluations["isolation_forest"].append(
@@ -2353,7 +2479,17 @@ class Phase3EvaluationHarness:
 
             # Model 3: Autoencoder
             ae_baseline = AutoencoderBaseline(config=self.config.autoencoder_config)
-            ae_scores = ae_baseline.score_series(feat_res, start_index=0)
+            ae_context = self._observability_context(
+                eval_run_result,
+                model_name="autoencoder",
+                model_version=self.config.autoencoder_config.model_version,
+            )
+            ae_scores = self.observability.sync_measured_call(
+                OperationalStage.MODEL_EXECUTION,
+                FailureCategory.MODEL_FAILURE,
+                ae_context,
+                action=lambda: ae_baseline.score_series(feat_res, start_index=0),
+            )
             ae_outcomes = self._evaluate_model_scores(
                 model_name="autoencoder",
                 model_version=self.config.autoencoder_config.model_version,
@@ -2363,6 +2499,7 @@ class Phase3EvaluationHarness:
                 score_converter=lambda res: calibration_input_from_autoencoder(
                     res, self.config.autoencoder_config
                 ),
+                context=ae_context,
             )
             all_outcomes.extend(ae_outcomes)
             scenario_model_evaluations["autoencoder"].append(
@@ -2404,6 +2541,32 @@ class Phase3EvaluationHarness:
         model_scores: list[Any],
         calibrator: CommonScoreCalibrator,
         score_converter: Any,
+        context: ObservabilityContext,
+    ) -> list[EvaluationOutcome]:
+        return self.observability.sync_measured_call(
+            OperationalStage.EVALUATION,
+            FailureCategory.EVALUATION_FAILURE,
+            context,
+            action=lambda: self._evaluate_model_scores_internal(
+                model_name=model_name,
+                model_version=model_version,
+                units=units,
+                model_scores=model_scores,
+                calibrator=calibrator,
+                score_converter=score_converter,
+                context=context,
+            ),
+        )
+
+    def _evaluate_model_scores_internal(
+        self,
+        model_name: str,
+        model_version: str,
+        units: list[EvaluationUnit],
+        model_scores: list[Any],
+        calibrator: CommonScoreCalibrator,
+        score_converter: Any,
+        context: ObservabilityContext,
     ) -> list[EvaluationOutcome]:
         outcomes: list[EvaluationOutcome] = []
         threshold = self.config.decision_policy.decision_threshold
@@ -2421,12 +2584,21 @@ class Phase3EvaluationHarness:
             err_cat: str | None = None
             err_msg: str | None = None
 
+            score_status = getattr(score_res, "status", None)
+            status_value = getattr(score_status, "value", score_status)
+
             if score_res is None:
                 outcome_status = EvaluationOutcomeStatus.INSUFFICIENT_DATA
                 err_cat = "missing_score"
                 err_msg = "No score produced for window index"
-            elif getattr(score_res, "status", None) != "success":
-                stat = str(getattr(score_res, "status", "unknown"))
+                self._record_semantic_failure(
+                    category=FailureCategory.MISSING_WINDOW,
+                    failure_type="MissingWindow",
+                    failure_message=err_msg,
+                    context=context,
+                )
+            elif status_value != "success":
+                stat = status_value if isinstance(status_value, str) else "unknown"
                 if "insufficient" in stat:
                     outcome_status = EvaluationOutcomeStatus.INSUFFICIENT_DATA
                 elif "non_convergence" in stat:
@@ -2441,11 +2613,73 @@ class Phase3EvaluationHarness:
                 err_msg = (
                     getattr(score_res, "error_message", None) or f"Model status: {stat}"
                 )
+                if stat in {"missing_target_value", "missing_features"}:
+                    self._record_semantic_failure(
+                        category=FailureCategory.MISSING_WINDOW,
+                        failure_type="MissingWindow",
+                        failure_message=err_msg,
+                        context=context,
+                    )
+                elif stat in {
+                    "fit_failure",
+                    "non_convergence",
+                    "invalid_input",
+                    "degenerate_series",
+                }:
+                    self._record_semantic_failure(
+                        category=FailureCategory.MODEL_FAILURE,
+                        failure_type="ModelFailure",
+                        failure_message=err_msg,
+                        context=context,
+                    )
+                elif "insufficient" not in stat:
+                    self._record_semantic_failure(
+                        category=FailureCategory.MALFORMED_OUTPUT,
+                        failure_type="MalformedOutput",
+                        failure_message="Model returned an unsupported status",
+                        context=context,
+                    )
             else:
+                score = getattr(score_res, "anomaly_score", None)
+                signal = getattr(score_res, "signal", None)
+                if (
+                    isinstance(score, bool)
+                    or not isinstance(score, (int, float))
+                    or not math.isfinite(float(score))
+                    or float(score) < 0.0
+                    or float(score) > 1.0
+                    or not isinstance(signal, AnomalySignal)
+                ):
+                    outcome_status = EvaluationOutcomeStatus.MODEL_FAILURE
+                    err_cat = "malformed_output"
+                    err_msg = "Successful model result violates the score contract"
+                    signal_id = (
+                        signal.signal_id if isinstance(signal, AnomalySignal) else None
+                    )
+                    self._record_semantic_failure(
+                        category=FailureCategory.MALFORMED_OUTPUT,
+                        failure_type="MalformedOutput",
+                        failure_message=err_msg,
+                        context=context.model_copy(update={"signal_id": signal_id}),
+                    )
+                    score_res = None
+
+            if score_res is not None and status_value == "success" and err_cat is None:
                 try:
-                    calib_inp: CalibrationInput = score_converter(score_res)
-                    cal_res: CalibratedScoreResult = calibrator.calibrate_input(
-                        calib_inp
+                    signal = score_res.signal
+                    calibration_context = context.model_copy(
+                        update={"signal_id": signal.signal_id if signal else None}
+                    )
+
+                    def apply_calibration() -> CalibratedScoreResult:
+                        calib_inp: CalibrationInput = score_converter(score_res)
+                        return calibrator.calibrate_input(calib_inp)
+
+                    cal_res = self.observability.sync_measured_call(
+                        OperationalStage.CALIBRATION,
+                        FailureCategory.CALIBRATION_FAILURE,
+                        calibration_context,
+                        action=apply_calibration,
                     )
                     raw_score = cal_res.raw_score
                     raw_score_type = cal_res.raw_score_type

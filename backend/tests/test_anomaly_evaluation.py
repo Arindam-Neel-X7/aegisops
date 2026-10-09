@@ -46,6 +46,7 @@ from app.anomaly.evaluation import (
     EvaluationOutcomeStatus,
     EvaluationPackageManifest,
     EvaluationRunMetadata,
+    EvaluationUnit,
     LatencySummary,
     MetricResult,
     ModelComparisonSummary,
@@ -86,7 +87,7 @@ from app.anomaly.evaluation import (
     validate_evaluation_outcomes,
     validate_evaluation_run_metadata,
 )
-from app.anomaly.calibration import CalibrationConfig
+from app.anomaly.calibration import CalibrationConfig, CommonScoreCalibrator
 from app.anomaly.calibration import (
     SUPPORTED_CALIBRATION_METHOD_VERSION,
     SUPPORTED_CALIBRATION_SPLIT_VERSION,
@@ -99,7 +100,15 @@ from app.anomaly.models import (
     CalibrationMetadata,
     EventTimeWindow,
 )
+from app.anomaly.observability import (
+    FailureCategory,
+    ObservabilityCollector,
+    ObservabilityContext,
+    OperationalStage,
+    OperationStatus,
+)
 from app.anomaly.prophet import ProphetScoreResult, ProphetScoreStatus
+from app.simulator.runtime.result import ScenarioRunResult
 from app.simulator.scenarios import get_scenario, scenario_ids
 from app.telemetry.schemas import EventSeverity
 
@@ -5928,13 +5937,449 @@ def test_validate_evaluation_run_metadata_partition_leakage() -> None:
 # 7.7 Harness Migration and Pipeline Tests
 
 
+def _a2_observability_context(
+    config: EvaluationHarnessConfig,
+) -> ObservabilityContext:
+    return ObservabilityContext(
+        run_id=uuid.UUID("11111111-1111-4111-8111-111111111111"),
+        scenario_id="cpu-saturation",
+        scenario_version="1.0.0",
+        seed=config.evaluation_seed,
+        reproducibility_key="a2-evaluation-reproducibility-key",
+        package_id=config.package_id,
+        package_version=config.package_version,
+        code_revision=config.code_revision,
+        model_name="prophet",
+        model_version=config.prophet_config.model_version,
+    )
+
+
+def _a2_evaluation_unit(context: ObservabilityContext) -> EvaluationUnit:
+    assert context.run_id is not None
+    assert context.scenario_id is not None
+    start = datetime(2026, 1, 1, 1, 0, 0, tzinfo=timezone.utc)
+    return EvaluationUnit(
+        unit_id="cpu-saturation:0",
+        unit_index=0,
+        scenario_id=context.scenario_id,
+        run_id=context.run_id,
+        window_start=start,
+        window_end=start + timedelta(seconds=1),
+        observation_timestamp=start + timedelta(seconds=1),
+        ground_truth_positive=False,
+        truth_activation_time=start + timedelta(seconds=10),
+        truth_recovery_time=start + timedelta(seconds=20),
+        service="order-service",
+    )
+
+
+def _a2_signal(context: ObservabilityContext) -> AnomalySignal:
+    assert context.run_id is not None
+    assert context.scenario_id is not None
+    assert context.scenario_version is not None
+    assert context.seed is not None
+    assert context.reproducibility_key is not None
+    event_time = datetime(2026, 1, 1, 1, 0, 1, tzinfo=timezone.utc)
+    return AnomalySignal(
+        signal_id=uuid.UUID("22222222-2222-4222-8222-222222222222"),
+        event_time=event_time,
+        service="order-service",
+        metric_or_feature="http_request_duration_ms:mean",
+        model_name="prophet",
+        model_version="1.0.0",
+        anomaly_score=0.75,
+        severity=EventSeverity.WARNING,
+        evidence=[
+            AnomalyEvidence(
+                evidence_id=uuid.UUID("33333333-3333-4333-8333-333333333333"),
+                evidence_type="forecast_deviation",
+                metric_or_feature="http_request_duration_ms",
+                timestamp=event_time,
+            )
+        ],
+        threshold_or_calibration=CalibrationMetadata(
+            method="baseline_normalization",
+            threshold_value=0.5,
+            calibration_version="1.0.0",
+        ),
+        schema_version="1.0",
+        run_id=context.run_id,
+        scenario_id=context.scenario_id,
+        scenario_version=context.scenario_version,
+        seed=context.seed,
+        reproducibility_key=context.reproducibility_key,
+        source_event_ids=[uuid.UUID("44444444-4444-4444-8444-444444444444")],
+        source_event_time_window=EventTimeWindow(
+            start_time=event_time - timedelta(seconds=1),
+            end_time=event_time,
+        ),
+        environment="simulation",
+        tenant_id=uuid.UUID("55555555-5555-4555-8555-555555555555"),
+    )
+
+
+def _a2_run_result(config: EvaluationHarnessConfig) -> ScenarioRunResult:
+    return ScenarioRunResult.model_construct(
+        run_id=uuid.UUID("66666666-6666-4666-8666-666666666666"),
+        scenario_id="cpu-saturation",
+        scenario_version="1.0.0",
+        seed=config.calibration_seed,
+        reproducibility_key="a2-calibration-reproducibility-key",
+    )
+
+
+def _assert_complete_a2_lineage(
+    actual: ObservabilityContext | None,
+    expected: ObservabilityContext,
+) -> None:
+    assert actual is not None
+    assert actual.model_dump(mode="json") == expected.model_dump(mode="json")
+
+
+def test_harness_observability_constructor_defaults_and_injection() -> None:
+    config = create_default_evaluation_harness_config()
+    default_harness = Phase3EvaluationHarness(config=config)
+    collector = ObservabilityCollector()
+    injected_harness = Phase3EvaluationHarness(
+        config=config,
+        observability=collector,
+    )
+
+    assert isinstance(default_harness.observability, ObservabilityCollector)
+    assert default_harness.observability is not collector
+    assert injected_harness.observability is collector
+
+
+@pytest.mark.asyncio
+async def test_harness_runtime_feature_extraction_failure_attribution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = create_default_evaluation_harness_config()
+    run_result = _a2_run_result(config)
+    collector = ObservabilityCollector()
+    harness = Phase3EvaluationHarness(config, collector)
+    original_exception = RuntimeError("feature extraction failed")
+
+    async def return_run_result(*_: Any, **__: Any) -> ScenarioRunResult:
+        return run_result
+
+    def fail_feature_extraction(*_: Any, **__: Any) -> Any:
+        raise original_exception
+
+    monkeypatch.setattr(
+        "app.anomaly.evaluation.ScenarioRunner.run",
+        return_run_result,
+    )
+    monkeypatch.setattr(
+        "app.anomaly.evaluation.extract_features",
+        fail_feature_extraction,
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await harness.run_evaluation()
+
+    assert exc_info.value is original_exception
+    operations = collector.snapshot_operations()
+    assert len(operations) == 1
+    assert operations[0].stage is OperationalStage.FEATURE_EXTRACTION
+    assert operations[0].status is OperationStatus.FAILURE
+    failures = collector.snapshot_failures()
+    assert len(failures) == 1
+    assert failures[0].category is FailureCategory.FEATURE_EXTRACTION_FAILURE
+    context = failures[0].context
+    assert context is not None
+    assert context.run_id == run_result.run_id
+    assert context.scenario_id == run_result.scenario_id
+    assert context.scenario_version == run_result.scenario_version
+    assert context.seed == run_result.seed
+    assert context.reproducibility_key == run_result.reproducibility_key
+    assert context.package_id == config.package_id
+    assert context.package_version == config.package_version
+    assert context.code_revision == config.code_revision
+    assert context.model_name is None
+    assert context.model_version is None
+
+
+@pytest.mark.asyncio
+async def test_harness_runtime_model_execution_failure_attribution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = create_default_evaluation_harness_config()
+    run_result = _a2_run_result(config)
+    collector = ObservabilityCollector()
+    harness = Phase3EvaluationHarness(config, collector)
+    original_exception = RuntimeError("model execution failed")
+
+    async def return_run_result(*_: Any, **__: Any) -> ScenarioRunResult:
+        return run_result
+
+    def return_features(*_: Any, **__: Any) -> object:
+        return object()
+
+    def fail_model_execution(*_: Any, **__: Any) -> Any:
+        raise original_exception
+
+    monkeypatch.setattr(
+        "app.anomaly.evaluation.ScenarioRunner.run",
+        return_run_result,
+    )
+    monkeypatch.setattr("app.anomaly.evaluation.extract_features", return_features)
+    monkeypatch.setattr(
+        "app.anomaly.evaluation.ProphetBaseline.score_series",
+        fail_model_execution,
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await harness.run_evaluation()
+
+    assert exc_info.value is original_exception
+    operations = collector.snapshot_operations()
+    assert [record.stage for record in operations] == [
+        OperationalStage.FEATURE_EXTRACTION,
+        OperationalStage.MODEL_EXECUTION,
+    ]
+    assert [record.status for record in operations] == [
+        OperationStatus.SUCCESS,
+        OperationStatus.FAILURE,
+    ]
+    failures = collector.snapshot_failures()
+    assert len(failures) == 1
+    assert failures[0].category is FailureCategory.MODEL_FAILURE
+    context = failures[0].context
+    assert context is not None
+    assert context.run_id == run_result.run_id
+    assert context.scenario_id == run_result.scenario_id
+    assert context.scenario_version == run_result.scenario_version
+    assert context.seed == run_result.seed
+    assert context.reproducibility_key == run_result.reproducibility_key
+    assert context.package_id == config.package_id
+    assert context.package_version == config.package_version
+    assert context.code_revision == config.code_revision
+    assert context.model_name == "prophet"
+    assert context.model_version == config.prophet_config.model_version
+
+
+def test_evaluation_runtime_missing_window_and_insufficient_history_semantics() -> None:
+    config = create_default_evaluation_harness_config()
+    context = _a2_observability_context(config)
+    unit = _a2_evaluation_unit(context)
+    calibrator = CommonScoreCalibrator(config=config.calibration_config)
+
+    missing_collector = ObservabilityCollector()
+    missing_harness = Phase3EvaluationHarness(config, missing_collector)
+    missing_outcomes = missing_harness._evaluate_model_scores(
+        model_name="prophet",
+        model_version="1.0.0",
+        units=[unit],
+        model_scores=[],
+        calibrator=calibrator,
+        score_converter=lambda value: value,
+        context=context,
+    )
+
+    assert missing_outcomes[0].status is EvaluationOutcomeStatus.INSUFFICIENT_DATA
+    missing_failures = missing_collector.snapshot_failures()
+    assert len(missing_failures) == 1
+    assert missing_failures[0].category is FailureCategory.MISSING_WINDOW
+    _assert_complete_a2_lineage(missing_failures[0].context, context)
+
+    insufficient_collector = ObservabilityCollector()
+    insufficient_harness = Phase3EvaluationHarness(config, insufficient_collector)
+    insufficient_result = ProphetScoreResult(
+        status=ProphetScoreStatus.INSUFFICIENT_HISTORY,
+        target_window_index=0,
+        target_timestamp=unit.observation_timestamp,
+        error_message="Insufficient causal history",
+    )
+    insufficient_outcomes = insufficient_harness._evaluate_model_scores(
+        model_name="prophet",
+        model_version="1.0.0",
+        units=[unit],
+        model_scores=[insufficient_result],
+        calibrator=calibrator,
+        score_converter=lambda value: value,
+        context=context,
+    )
+
+    assert insufficient_outcomes[0].status is EvaluationOutcomeStatus.INSUFFICIENT_DATA
+    assert insufficient_collector.snapshot_failures() == ()
+    assert len(insufficient_collector.snapshot_operations()) == 1
+
+    missing_target_collector = ObservabilityCollector()
+    missing_target_harness = Phase3EvaluationHarness(config, missing_target_collector)
+    missing_target_result = ProphetScoreResult(
+        status=ProphetScoreStatus.MISSING_TARGET_VALUE,
+        target_window_index=0,
+        target_timestamp=unit.observation_timestamp,
+        error_message="Target window value is missing",
+    )
+    missing_target_outcomes = missing_target_harness._evaluate_model_scores(
+        model_name="prophet",
+        model_version="1.0.0",
+        units=[unit],
+        model_scores=[missing_target_result],
+        calibrator=calibrator,
+        score_converter=lambda value: value,
+        context=context,
+    )
+
+    assert missing_target_outcomes[0].status is EvaluationOutcomeStatus.MODEL_FAILURE
+    missing_target_failures = missing_target_collector.snapshot_failures()
+    assert len(missing_target_failures) == 1
+    assert missing_target_failures[0].category is FailureCategory.MISSING_WINDOW
+    _assert_complete_a2_lineage(missing_target_failures[0].context, context)
+
+
+def test_evaluation_runtime_model_and_malformed_output_semantics() -> None:
+    config = create_default_evaluation_harness_config()
+    context = _a2_observability_context(config)
+    unit = _a2_evaluation_unit(context)
+    calibrator = CommonScoreCalibrator(config=config.calibration_config)
+
+    model_collector = ObservabilityCollector()
+    model_harness = Phase3EvaluationHarness(config, model_collector)
+    fit_failure = ProphetScoreResult(
+        status=ProphetScoreStatus.FIT_FAILURE,
+        target_window_index=0,
+        target_timestamp=unit.observation_timestamp,
+        error_message="Model fit failed",
+    )
+    model_outcomes = model_harness._evaluate_model_scores(
+        model_name="prophet",
+        model_version="1.0.0",
+        units=[unit],
+        model_scores=[fit_failure],
+        calibrator=calibrator,
+        score_converter=lambda value: value,
+        context=context,
+    )
+
+    assert model_outcomes[0].status is EvaluationOutcomeStatus.FIT_FAILURE
+    model_failures = model_collector.snapshot_failures()
+    assert len(model_failures) == 1
+    assert model_failures[0].category is FailureCategory.MODEL_FAILURE
+    _assert_complete_a2_lineage(model_failures[0].context, context)
+
+    malformed_collector = ObservabilityCollector()
+    malformed_harness = Phase3EvaluationHarness(config, malformed_collector)
+    malformed_result = ProphetScoreResult.model_construct(
+        status=ProphetScoreStatus.SUCCESS,
+        target_window_index=0,
+        target_timestamp=unit.observation_timestamp,
+        anomaly_score=None,
+        signal=None,
+        history_window_count=10,
+        error_message=None,
+    )
+    malformed_outcomes = malformed_harness._evaluate_model_scores(
+        model_name="prophet",
+        model_version="1.0.0",
+        units=[unit],
+        model_scores=[malformed_result],
+        calibrator=calibrator,
+        score_converter=lambda value: value,
+        context=context,
+    )
+
+    assert malformed_outcomes[0].status is EvaluationOutcomeStatus.MODEL_FAILURE
+    assert malformed_outcomes[0].error_category == "malformed_output"
+    malformed_failures = malformed_collector.snapshot_failures()
+    assert len(malformed_failures) == 1
+    assert malformed_failures[0].category is FailureCategory.MALFORMED_OUTPUT
+    _assert_complete_a2_lineage(malformed_failures[0].context, context)
+
+
+def test_evaluation_runtime_calibration_failure_is_single_and_source_accurate() -> None:
+    config = create_default_evaluation_harness_config()
+    context = _a2_observability_context(config)
+    unit = _a2_evaluation_unit(context)
+    signal = _a2_signal(context)
+    result = ProphetScoreResult(
+        status=ProphetScoreStatus.SUCCESS,
+        target_window_index=0,
+        target_timestamp=unit.observation_timestamp,
+        anomaly_score=signal.anomaly_score,
+        signal=signal,
+    )
+    original_exception = RuntimeError("calibration application failed")
+
+    def fail_conversion(_: Any) -> Any:
+        raise original_exception
+
+    collector = ObservabilityCollector()
+    harness = Phase3EvaluationHarness(config, collector)
+    outcomes = harness._evaluate_model_scores(
+        model_name="prophet",
+        model_version="1.0.0",
+        units=[unit],
+        model_scores=[result],
+        calibrator=CommonScoreCalibrator(config=config.calibration_config),
+        score_converter=fail_conversion,
+        context=context,
+    )
+
+    assert outcomes[0].status is EvaluationOutcomeStatus.MODEL_FAILURE
+    assert outcomes[0].error_category == "calibration_exception"
+    failures = collector.snapshot_failures()
+    assert len(failures) == 1
+    assert failures[0].category is FailureCategory.CALIBRATION_FAILURE
+    expected_context = context.model_copy(update={"signal_id": signal.signal_id})
+    _assert_complete_a2_lineage(failures[0].context, expected_context)
+    operations = collector.snapshot_operations()
+    assert [record.stage for record in operations] == [
+        OperationalStage.CALIBRATION,
+        OperationalStage.EVALUATION,
+    ]
+    assert [record.status for record in operations] == [
+        OperationStatus.FAILURE,
+        OperationStatus.SUCCESS,
+    ]
+
+
+def test_evaluation_runtime_exception_records_single_evaluation_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = create_default_evaluation_harness_config()
+    context = _a2_observability_context(config)
+    collector = ObservabilityCollector()
+    harness = Phase3EvaluationHarness(config, collector)
+    original_exception = RuntimeError("outcome construction failed")
+
+    def fail_evaluation(**_: Any) -> list[EvaluationOutcome]:
+        raise original_exception
+
+    monkeypatch.setattr(harness, "_evaluate_model_scores_internal", fail_evaluation)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        harness._evaluate_model_scores(
+            model_name="prophet",
+            model_version="1.0.0",
+            units=[],
+            model_scores=[],
+            calibrator=CommonScoreCalibrator(config=config.calibration_config),
+            score_converter=lambda value: value,
+            context=context,
+        )
+
+    assert exc_info.value is original_exception
+    failures = collector.snapshot_failures()
+    assert len(failures) == 1
+    assert failures[0].category is FailureCategory.EVALUATION_FAILURE
+    _assert_complete_a2_lineage(failures[0].context, context)
+    operations = collector.snapshot_operations()
+    assert len(operations) == 1
+    assert operations[0].stage is OperationalStage.EVALUATION
+    assert operations[0].status is OperationStatus.FAILURE
+
+
 @pytest.mark.asyncio
 async def test_harness_run_evaluation_typed_metadata_pipeline(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     cfg = create_default_evaluation_harness_config()
-    harness = Phase3EvaluationHarness(config=cfg)
+    collector = ObservabilityCollector()
+    harness = Phase3EvaluationHarness(config=cfg, observability=collector)
 
     # Run pipeline with real components on single scenario/model
     outcomes, summaries, run_metadata = await harness.run_evaluation()
@@ -5980,6 +6425,61 @@ async def test_harness_run_evaluation_typed_metadata_pipeline(
 
     # Cross-object validator succeeds on real output
     validate_evaluation_run_metadata(run_metadata, cfg)
+
+    operation_records = collector.snapshot_operations()
+    stage_counts = collections.Counter(record.stage for record in operation_records)
+    assert stage_counts == {
+        OperationalStage.FEATURE_EXTRACTION: 16,
+        OperationalStage.MODEL_EXECUTION: 48,
+        OperationalStage.CALIBRATION: 601,
+        OperationalStage.EVALUATION: 24,
+    }
+    assert all(record.status is OperationStatus.SUCCESS for record in operation_records)
+    calibration_records = [
+        record
+        for record in operation_records
+        if record.stage is OperationalStage.CALIBRATION
+    ]
+    assert (
+        sum(
+            record.context is not None and record.context.model_name is None
+            for record in calibration_records
+        )
+        == 1
+    )
+    assert (
+        sum(
+            record.context is not None and record.context.model_name is not None
+            for record in calibration_records
+        )
+        == 600
+    )
+    evaluation_records = [
+        record
+        for record in operation_records
+        if record.stage is OperationalStage.EVALUATION
+    ]
+    assert {
+        (record.context.scenario_id, record.context.model_name)
+        for record in evaluation_records
+        if record.context is not None
+    } == {
+        (scenario_id, model_name)
+        for scenario_id in cfg.scenario_ids
+        for model_name in CANONICAL_MODEL_ORDER
+    }
+    for record in evaluation_records:
+        assert record.context is not None
+        assert record.context.run_id is not None
+        assert record.context.scenario_version is not None
+        assert record.context.seed == cfg.evaluation_seed
+        assert record.context.reproducibility_key is not None
+        assert record.context.package_id == cfg.package_id
+        assert record.context.package_version == cfg.package_version
+        assert record.context.code_revision == cfg.code_revision
+        assert record.context.model_name in CANONICAL_MODEL_ORDER
+        assert record.context.model_version is not None
+    assert collector.snapshot_failures() == ()
 
     # Serialization compatibility
     dumped = run_metadata.model_dump(mode="json")

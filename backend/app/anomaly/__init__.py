@@ -7,6 +7,16 @@ from app.anomaly.evaluation import (
     compute_binary_decision,
     classify_confusion_category,
 )
+from app.anomaly.observability import (
+    SUPPORTED_OBSERVABILITY_SCHEMA_VERSION,
+    OperationalStage,
+    OperationStatus,
+    FailureCategory,
+    ObservabilityContext,
+    OperationRecord,
+    FailureRecord,
+    ObservabilityCollector,
+)
 from app.anomaly.autoencoder import (
     SUPPORTED_AE_ARTIFACT_SCHEMA_VERSION,
     SUPPORTED_AE_CONFIG_SCHEMA_VERSION,
@@ -130,6 +140,13 @@ from app.anomaly.prophet import (
 from app.anomaly.publisher import (
     AnomalySignalPublisher,
 )
+from app.anomaly.lineage import (
+    SUPPORTED_ANOMALY_LINEAGE_SCHEMA_VERSION,
+    AnomalyReproducibilityLineage,
+    build_anomaly_reproducibility_lineage,
+    compute_anomaly_semantic_fingerprint,
+    require_same_anomaly_semantic_identity,
+)
 from app.anomaly.serialization import (
     ANOMALY_EVENT_TYPE,
     ANOMALY_KAFKA_TOPIC,
@@ -147,6 +164,14 @@ __all__ = [
     "evaluate_ground_truth_label",
     "compute_binary_decision",
     "classify_confusion_category",
+    "SUPPORTED_OBSERVABILITY_SCHEMA_VERSION",
+    "OperationalStage",
+    "OperationStatus",
+    "FailureCategory",
+    "ObservabilityContext",
+    "OperationRecord",
+    "FailureRecord",
+    "ObservabilityCollector",
     "ANOMALY_EVENT_TYPE",
     "ANOMALY_KAFKA_TOPIC",
     "MAX_UINT32",
@@ -256,4 +281,9 @@ __all__ = [
     "serialize_anomaly_signal",
     "serialize_experiment_config",
     "to_canonical_telemetry_event",
+    "SUPPORTED_ANOMALY_LINEAGE_SCHEMA_VERSION",
+    "AnomalyReproducibilityLineage",
+    "build_anomaly_reproducibility_lineage",
+    "compute_anomaly_semantic_fingerprint",
+    "require_same_anomaly_semantic_identity",
 ]

@@ -14,10 +14,18 @@ from app.anomaly.models import (
     CalibrationMetadata,
     EventTimeWindow,
 )
+from app.anomaly.handoff import anomaly_signal_from_envelope
+from app.anomaly.lineage import compute_anomaly_semantic_fingerprint
+from app.anomaly.observability import (
+    ObservabilityCollector,
+    OperationalStage,
+    OperationStatus,
+)
 from app.anomaly.publisher import AnomalySignalPublisher
 from app.core.config import settings
 from app.telemetry.schemas import EventSeverity, EventType
 from app.telemetry.topics import KafkaTopic
+from app.telemetry.transport import TelemetryEnvelope, parse_kafka_headers
 from app.telemetry.transport.producer import KafkaTelemetryProducer
 from app.telemetry.transport.serialization import deserialize_event
 
@@ -99,7 +107,11 @@ async def test_controlled_real_kafka_anomaly_publication() -> None:
 
     await producer.start()
     try:
-        publisher = AnomalySignalPublisher(producer=producer)
+        collector = ObservabilityCollector()
+        publisher = AnomalySignalPublisher(
+            producer=producer,
+            observability=collector,
+        )
         publish_result = await publisher.publish(signal)
 
         # Assert PublishResult evidence
@@ -179,6 +191,9 @@ async def test_controlled_real_kafka_anomaly_publication() -> None:
             # Reconstruct AnomalySignal from payload and assert equality
             reconstructed = AnomalySignal.model_validate(event.payload)
             assert reconstructed == signal
+            assert compute_anomaly_semantic_fingerprint(reconstructed) == (
+                compute_anomaly_semantic_fingerprint(signal)
+            )
             assert reconstructed.signal_id == SIGNAL_ID
             assert reconstructed.event_time == FIXED_EVENT_TIME
             assert reconstructed.evidence[0].evidence_id == EVIDENCE_ID
@@ -197,6 +212,45 @@ async def test_controlled_real_kafka_anomaly_publication() -> None:
             )
             assert reconstructed.tags == signal.tags
 
+            # Test anomaly_signal_from_envelope handoff closure contract
+            context, producer_version = parse_kafka_headers(raw_msg.headers)
+            envelope = TelemetryEnvelope(
+                event=event,
+                context=context,
+                kafka_timestamp_ms=raw_msg.timestamp
+                if raw_msg.timestamp is not None
+                else 0,
+                topic=raw_msg.topic,
+                partition=raw_msg.partition,
+                offset=raw_msg.offset,
+                key=raw_msg.key,
+                consumed_at=datetime.now(timezone.utc),
+                producer_version=producer_version,
+            )
+            envelope_before = envelope.model_dump_json()
+            handoff_signal = anomaly_signal_from_envelope(envelope)
+            assert envelope.model_dump_json() == envelope_before
+            assert handoff_signal == signal
+            assert compute_anomaly_semantic_fingerprint(
+                handoff_signal
+            ) == compute_anomaly_semantic_fingerprint(signal)
+            assert handoff_signal.signal_id == signal.signal_id
+            assert handoff_signal.run_id == signal.run_id
+            assert handoff_signal.scenario_id == signal.scenario_id
+            assert handoff_signal.seed == signal.seed
+            assert handoff_signal.reproducibility_key == signal.reproducibility_key
+            assert handoff_signal.source_event_ids == signal.source_event_ids
+            assert handoff_signal.evidence == signal.evidence
+            assert (
+                handoff_signal.threshold_or_calibration
+                == signal.threshold_or_calibration
+            )
+            assert handoff_signal.tags == signal.tags
+            assert (
+                handoff_signal.source_event_time_window
+                == signal.source_event_time_window
+            )
+
             # Assert byte count equality
             assert publish_result.serialized_bytes == len(raw_msg.value)
 
@@ -205,6 +259,28 @@ async def test_controlled_real_kafka_anomaly_publication() -> None:
 
         # Assert original signal immutability
         assert signal.model_dump_json() == signal_snapshot_json
+
+        # Assert real publication observability and complete available lineage.
+        operations = collector.snapshot_operations()
+        assert len(operations) == 1
+        operation = operations[0]
+        assert operation.stage is OperationalStage.PUBLICATION
+        assert operation.status is OperationStatus.SUCCESS
+        assert math.isfinite(operation.latency_ms)
+        assert operation.latency_ms >= 0.0
+        assert operation.context is not None
+        assert operation.context.run_id == signal.run_id
+        assert operation.context.scenario_id == signal.scenario_id
+        assert operation.context.scenario_version == signal.scenario_version
+        assert operation.context.seed == signal.seed
+        assert operation.context.reproducibility_key == signal.reproducibility_key
+        assert operation.context.model_name == signal.model_name
+        assert operation.context.model_version == signal.model_version
+        assert operation.context.signal_id == signal.signal_id
+        assert operation.context.semantic_fingerprint == (
+            compute_anomaly_semantic_fingerprint(signal)
+        )
+        assert collector.snapshot_failures() == ()
 
     finally:
         await producer.close()
