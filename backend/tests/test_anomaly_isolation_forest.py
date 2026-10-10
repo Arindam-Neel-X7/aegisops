@@ -61,14 +61,22 @@ def _build_multivariate_feature_result(
 
     for i, lat in enumerate(latencies):
         t = t0 + timedelta(seconds=i * interval_seconds)
-        observations.append(_make_observation(event_time=t, value=lat, metric_name="http_request_duration_ms"))
+        observations.append(
+            _make_observation(
+                event_time=t, value=lat, metric_name="http_request_duration_ms"
+            )
+        )
         if requests is not None:
             observations.append(
-                _make_observation(event_time=t, value=requests[i], metric_name="http_requests_total")
+                _make_observation(
+                    event_time=t, value=requests[i], metric_name="http_requests_total"
+                )
             )
         if errors is not None:
             observations.append(
-                _make_observation(event_time=t, value=errors[i], metric_name="http_errors_total")
+                _make_observation(
+                    event_time=t, value=errors[i], metric_name="http_errors_total"
+                )
             )
 
     feature_names = ["http_request_duration_ms:mean"]
@@ -101,7 +109,8 @@ def _sample_iforest_config(
         schema_version="1.0",
         model_name="isolation_forest",
         model_version="1.0.0",
-        feature_names=feature_names or ["http_request_duration_ms:mean", "http_requests_total:mean"],
+        feature_names=feature_names
+        or ["http_request_duration_ms:mean", "http_requests_total:mean"],
         scaling_method=scaling_method,  # type: ignore[arg-type]
         min_training_windows=min_history,
         contamination=contamination,  # type: ignore[arg-type]
@@ -179,7 +188,11 @@ def test_valid_anomalous_controlled_multivariate_fixture() -> None:
     assert result.anomaly_score is not None
     assert result.anomaly_score > 0.6  # Severe anomaly has elevated score
     assert result.signal is not None
-    assert result.signal.severity in (EventSeverity.WARNING, EventSeverity.ERROR, EventSeverity.CRITICAL)
+    assert result.signal.severity in (
+        EventSeverity.WARNING,
+        EventSeverity.ERROR,
+        EventSeverity.CRITICAL,
+    )
 
 
 def test_anomalous_score_higher_than_normal_fixture() -> None:
@@ -202,7 +215,10 @@ def test_anomalous_score_higher_than_normal_fixture() -> None:
     assert res_anom.anomaly_score is not None
     assert res_anom.anomaly_score > res_norm.anomaly_score
     # In scikit-learn score_samples, more negative = more anomalous
-    assert res_anom.raw_score_samples is not None and res_norm.raw_score_samples is not None
+    assert (
+        res_anom.raw_score_samples is not None
+        and res_norm.raw_score_samples is not None
+    )
     assert res_anom.raw_score_samples < res_norm.raw_score_samples
 
 
@@ -221,7 +237,9 @@ def test_deterministic_repeated_execution_with_same_random_state() -> None:
 
     assert res1.status == res2.status == IsolationForestScoreStatus.SUCCESS
     assert res1.raw_score_samples == pytest.approx(res2.raw_score_samples, rel=1e-5)
-    assert res1.raw_decision_function == pytest.approx(res2.raw_decision_function, rel=1e-5)
+    assert res1.raw_decision_function == pytest.approx(
+        res2.raw_decision_function, rel=1e-5
+    )
     assert res1.anomaly_score == pytest.approx(res2.anomaly_score, rel=1e-5)
 
 
@@ -246,11 +264,17 @@ def test_schema_valid_anomaly_signal_output() -> None:
 
     ev = signal.evidence[0]
     assert ev.evidence_type == "isolation_forest_decision"
-    assert ev.details["ordered_features"] == ["http_request_duration_ms:mean", "http_requests_total:mean"]
+    assert ev.details["ordered_features"] == [
+        "http_request_duration_ms:mean",
+        "http_requests_total:mean",
+    ]
     assert "raw_feature_vector" in ev.details
     assert "scaled_feature_vector" in ev.details
     assert "raw_score_samples" in ev.details
-    assert ev.details["raw_score_interpretation"] == "sklearn_score_samples_opposite_anomaly_direction"
+    assert (
+        ev.details["raw_score_interpretation"]
+        == "sklearn_score_samples_opposite_anomaly_direction"
+    )
     assert ev.details["scaling_method"] == "standard"
     assert ev.details["random_state"] == 42
     assert ev.details["history_window_count"] == 19
@@ -356,7 +380,9 @@ def test_empty_series_returns_invalid_input() -> None:
     extractor = DeterministicFeatureExtractor(config=cfg_feat)
     feat_empty = extractor.extract_from_observations([])
 
-    cfg = _sample_iforest_config(feature_names=["http_request_duration_ms:mean"], min_history=10)
+    cfg = _sample_iforest_config(
+        feature_names=["http_request_duration_ms:mean"], min_history=10
+    )
     baseline = IsolationForestBaseline(config=cfg)
 
     res = baseline.score_target_window(feat_empty)
@@ -383,7 +409,10 @@ def test_missing_feature_in_target_window() -> None:
         seed=42,
         reproducibility_key="rep-1",
         feature_config_id="cfg-1",
-        values={"http_request_duration_ms:mean": 100.0, "http_requests_total:mean": 10.0},
+        values={
+            "http_request_duration_ms:mean": 100.0,
+            "http_requests_total:mean": 10.0,
+        },
     )
     w1 = FeatureWindow(
         window_index=1,
@@ -436,8 +465,20 @@ def test_missing_feature_in_target_window() -> None:
 
 def test_score_series_sequential_causal_evaluation() -> None:
     # 20 windows: 0..14 normal with typical variation, 15..19 severe anomaly
-    latencies = [100.0 + (i % 5) * 4.0 for i in range(15)] + [500.0, 600.0, 700.0, 800.0, 900.0]
-    requests = [10.0 + (i % 3) * 2.0 for i in range(15)] + [50.0, 60.0, 70.0, 80.0, 90.0]
+    latencies = [100.0 + (i % 5) * 4.0 for i in range(15)] + [
+        500.0,
+        600.0,
+        700.0,
+        800.0,
+        900.0,
+    ]
+    requests = [10.0 + (i % 3) * 2.0 for i in range(15)] + [
+        50.0,
+        60.0,
+        70.0,
+        80.0,
+        90.0,
+    ]
 
     feat_res = _build_multivariate_feature_result(latencies, requests=requests)
     cfg = _sample_iforest_config(min_history=10)
@@ -450,9 +491,15 @@ def test_score_series_sequential_causal_evaluation() -> None:
         assert r.status == IsolationForestScoreStatus.SUCCESS
 
     # Anomalous windows (15..19) score significantly higher than baseline windows (10..14)
-    baseline_scores = [r.anomaly_score for r in series_results[:5] if r.anomaly_score is not None]
-    anom_scores = [r.anomaly_score for r in series_results[5:] if r.anomaly_score is not None]
-    assert sum(anom_scores) / len(anom_scores) > sum(baseline_scores) / len(baseline_scores)
+    baseline_scores = [
+        r.anomaly_score for r in series_results[:5] if r.anomaly_score is not None
+    ]
+    anom_scores = [
+        r.anomaly_score for r in series_results[5:] if r.anomaly_score is not None
+    ]
+    assert sum(anom_scores) / len(anom_scores) > sum(baseline_scores) / len(
+        baseline_scores
+    )
     for r in series_results[5:]:
         assert r.anomaly_score is not None and r.anomaly_score > 0.60
 
@@ -465,7 +512,9 @@ def test_fit_failure_handling(monkeypatch: pytest.MonkeyPatch) -> None:
     cfg = _sample_iforest_config(min_history=10)
     baseline = IsolationForestBaseline(config=cfg)
 
-    def mock_fail(*args: object, **kwargs: object) -> tuple[dict[str, float], dict[str, float], float, float, float, object, int]:
+    def mock_fail(
+        *args: object, **kwargs: object
+    ) -> tuple[dict[str, float], dict[str, float], float, float, float, object, int]:
         raise IsolationForestFitError("Tree builder crashed")
 
     monkeypatch.setattr(baseline, "_fit_and_score", mock_fail)
@@ -504,10 +553,20 @@ def test_deterministic_feature_order_preserved() -> None:
     requests = [10.0 for _ in range(19)] + [50.0]
     errors = [0.0 for _ in range(19)] + [10.0]
 
-    feat_res = _build_multivariate_feature_result(latencies, requests=requests, errors=errors)
+    feat_res = _build_multivariate_feature_result(
+        latencies, requests=requests, errors=errors
+    )
 
-    order_a = ["http_request_duration_ms:mean", "http_requests_total:mean", "http_errors_total:mean"]
-    order_b = ["http_errors_total:mean", "http_requests_total:mean", "http_request_duration_ms:mean"]
+    order_a = [
+        "http_request_duration_ms:mean",
+        "http_requests_total:mean",
+        "http_errors_total:mean",
+    ]
+    order_b = [
+        "http_errors_total:mean",
+        "http_requests_total:mean",
+        "http_request_duration_ms:mean",
+    ]
 
     cfg_a = _sample_iforest_config(feature_names=order_a, min_history=10)
     cfg_b = _sample_iforest_config(feature_names=order_b, min_history=10)
@@ -559,7 +618,9 @@ def test_random_state_zero_boundary() -> None:
 
     latencies = [100.0 + (i % 5) * 4.0 for i in range(19)] + [900.0]
     feat_res = _build_multivariate_feature_result(latencies)
-    cfg_full = _sample_iforest_config(feature_names=["http_request_duration_ms:mean"], min_history=10, random_state=0)
+    cfg_full = _sample_iforest_config(
+        feature_names=["http_request_duration_ms:mean"], min_history=10, random_state=0
+    )
     baseline = IsolationForestBaseline(config=cfg_full)
     res = baseline.score_target_window(feat_res, target_window_index=19)
 
@@ -575,7 +636,11 @@ def test_random_state_max_uint32_boundary() -> None:
 
     latencies = [100.0 + (i % 5) * 4.0 for i in range(19)] + [900.0]
     feat_res = _build_multivariate_feature_result(latencies)
-    cfg_full = _sample_iforest_config(feature_names=["http_request_duration_ms:mean"], min_history=10, random_state=MAX_UINT32)
+    cfg_full = _sample_iforest_config(
+        feature_names=["http_request_duration_ms:mean"],
+        min_history=10,
+        random_state=MAX_UINT32,
+    )
     baseline = IsolationForestBaseline(config=cfg_full)
     res = baseline.score_target_window(feat_res, target_window_index=19)
 

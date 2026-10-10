@@ -33,7 +33,9 @@ def deserialize_anomaly_signal(raw: bytes | bytearray | memoryview) -> AnomalySi
         raw_bytes = bytes(raw)
         data: Any = json.loads(raw_bytes.decode("utf-8"))
         if not isinstance(data, dict):
-            raise AnomalyDeserializationError("Deserialized JSON root must be an object")
+            raise AnomalyDeserializationError(
+                "Deserialized JSON root must be an object"
+            )
 
         if "schema_version" in data:
             declared_version = data["schema_version"]
@@ -46,7 +48,13 @@ def deserialize_anomaly_signal(raw: bytes | bytearray | memoryview) -> AnomalySi
         return AnomalySignal.model_validate(data)
     except AnomalyDeserializationError:
         raise
-    except (json.JSONDecodeError, ValidationError, ValueError, TypeError, UnicodeDecodeError) as exc:
+    except (
+        json.JSONDecodeError,
+        ValidationError,
+        ValueError,
+        TypeError,
+        UnicodeDecodeError,
+    ) as exc:
         raise AnomalyDeserializationError(
             f"Failed to deserialize AnomalySignal: {exc}"
         ) from exc

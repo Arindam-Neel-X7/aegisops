@@ -5,7 +5,14 @@ import math
 from typing import Any
 import uuid
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.telemetry.schemas import EventSeverity
 
@@ -170,5 +177,7 @@ class AnomalySignal(BaseModel):
         if not math.isfinite(v):
             raise ValueError(f"anomaly_score must be a finite float, got {v}")
         if v < 0.0 or v > 1.0:
-            raise ValueError(f"anomaly_score must be bounded in range [0.0, 1.0], got {v}")
+            raise ValueError(
+                f"anomaly_score must be bounded in range [0.0, 1.0], got {v}"
+            )
         return v

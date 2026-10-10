@@ -6,14 +6,24 @@ import math
 from typing import Any, Literal, Sequence
 import uuid
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.anomaly.autoencoder import AutoencoderBaselineConfig, AutoencoderScoreResult
 from app.anomaly.errors import (
     CalibrationError,
     CalibrationReferenceError,
 )
-from app.anomaly.isolation_forest import IsolationForestBaselineConfig, IsolationForestScoreResult
+from app.anomaly.isolation_forest import (
+    IsolationForestBaselineConfig,
+    IsolationForestScoreResult,
+)
 from app.anomaly.models import (
     MAX_UINT64,
     SUPPORTED_ANOMALY_SCHEMA_VERSION,
@@ -54,7 +64,9 @@ class SeverityThresholdsConfig(BaseModel):
         if isinstance(v, bool):
             raise ValueError("Threshold cannot be a boolean value")
         if not isinstance(v, (int, float)):
-            raise ValueError(f"Threshold must be a numeric float, got {type(v).__name__}")
+            raise ValueError(
+                f"Threshold must be a numeric float, got {type(v).__name__}"
+            )
         val = float(v)
         if not math.isfinite(val):
             raise ValueError(f"Threshold must be finite, got {val}")
@@ -154,15 +166,21 @@ class CalibrationConfig(BaseModel):
     min_calibration_samples_per_model: int = Field(default=10, ge=3)
     calibration_reference_id: str = Field(default="calib-ref-v1", min_length=1)
     calibration_reference_version: str = Field(default="1.0.0", min_length=1)
-    calibration_split_rule: str = Field(default="independent_reference_set", min_length=1)
+    calibration_split_rule: str = Field(
+        default="independent_reference_set", min_length=1
+    )
     calibration_split_version: str = Field(min_length=1)
     tie_handling_rule: Literal["average", "strict_less", "weak_less"] = "average"
     interpolation_rule: Literal["linear", "nearest", "step"] = "linear"
     clipping_policy: Literal["clamp_0_1", "error_out_of_bounds"] = "clamp_0_1"
     missing_calibration_policy: Literal["error", "reject"] = "error"
-    degenerate_distribution_policy: Literal["center_or_zero", "error"] = "center_or_zero"
+    degenerate_distribution_policy: Literal["center_or_zero", "error"] = (
+        "center_or_zero"
+    )
     severity_mapping_version: str = Field(min_length=1)
-    severity_thresholds: SeverityThresholdsConfig = Field(default_factory=SeverityThresholdsConfig)
+    severity_thresholds: SeverityThresholdsConfig = Field(
+        default_factory=SeverityThresholdsConfig
+    )
 
     @field_validator(
         "schema_version",
@@ -347,7 +365,10 @@ class CommonScoreCalibrator:
                         f"Leakage rejected: reference sample {s.sample_id} has partition_role '{s.partition_role}', "
                         f"expected 'calibration'."
                     )
-                if ds.calibration_cutoff_time is not None and s.event_time > ds.calibration_cutoff_time:
+                if (
+                    ds.calibration_cutoff_time is not None
+                    and s.event_time > ds.calibration_cutoff_time
+                ):
                     raise CalibrationReferenceError(
                         f"Future leakage rejected: reference sample {s.sample_id} with event_time {s.event_time} "
                         f"exceeds calibration cutoff {ds.calibration_cutoff_time}."
@@ -395,13 +416,13 @@ class CommonScoreCalibrator:
             )
             self._fitted_models[(ds.model_name, ds.model_version)] = fitted
 
-    def _calibrate_score(
-        self, score: float, fitted: ModelFittedCalibration
-    ) -> float:
+    def _calibrate_score(self, score: float, fitted: ModelFittedCalibration) -> float:
         """Transform a baseline-normalized score into a calibrated score in [0.0, 1.0]."""
         if fitted.is_degenerate:
             if self.config.degenerate_distribution_policy == "center_or_zero":
-                return 0.0 if score <= (fitted.degenerate_constant_value or 0.0) else 1.0
+                return (
+                    0.0 if score <= (fitted.degenerate_constant_value or 0.0) else 1.0
+                )
             raise CalibrationError("Encountered degenerate calibration distribution")
 
         if self.config.calibration_method == "identity":
@@ -575,7 +596,9 @@ class CommonScoreCalibrator:
                 updated_details = dict(ev.details)
                 updated_details["calibrated_score"] = calibrated_score
                 updated_details["calibration_method"] = self.config.calibration_method
-                updated_details["source_baseline_score"] = input_data.baseline_normalized_score
+                updated_details["source_baseline_score"] = (
+                    input_data.baseline_normalized_score
+                )
                 if input_data.signed_residual is not None:
                     updated_details["signed_residual"] = input_data.signed_residual
                 evidence_items.append(
@@ -674,8 +697,14 @@ def calibration_input_from_prophet(
     config: ProphetBaselineConfig | None = None,
 ) -> CalibrationInput:
     """Create CalibrationInput from ProphetScoreResult using Option A (absolute deviation raw score)."""
-    if result.status != "success" or result.signal is None or result.anomaly_score is None:
-        raise CalibrationError(f"Cannot build CalibrationInput from non-success Prophet result: {result.status}")
+    if (
+        result.status != "success"
+        or result.signal is None
+        or result.anomaly_score is None
+    ):
+        raise CalibrationError(
+            f"Cannot build CalibrationInput from non-success Prophet result: {result.status}"
+        )
 
     sig = result.signal
     norm_method = (
@@ -725,7 +754,11 @@ def calibration_input_from_isolation_forest(
     config: IsolationForestBaselineConfig | None = None,
 ) -> CalibrationInput:
     """Create CalibrationInput from IsolationForestScoreResult."""
-    if result.status != "success" or result.signal is None or result.anomaly_score is None:
+    if (
+        result.status != "success"
+        or result.signal is None
+        or result.anomaly_score is None
+    ):
         raise CalibrationError(
             f"Cannot build CalibrationInput from non-success Isolation Forest result: {result.status}"
         )
@@ -745,7 +778,9 @@ def calibration_input_from_isolation_forest(
         source_configuration_version=cfg_ver,
         source_normalization_method=norm_method,
         source_normalization_version=norm_ver,
-        raw_score=result.raw_score_samples if result.raw_score_samples is not None else 0.0,
+        raw_score=result.raw_score_samples
+        if result.raw_score_samples is not None
+        else 0.0,
         raw_score_type="score_samples",
         raw_score_direction="lower_is_more_anomalous",
         signed_residual=None,
@@ -772,16 +807,18 @@ def calibration_input_from_autoencoder(
     config: AutoencoderBaselineConfig | None = None,
 ) -> CalibrationInput:
     """Create CalibrationInput from AutoencoderScoreResult."""
-    if result.status != "success" or result.signal is None or result.anomaly_score is None:
+    if (
+        result.status != "success"
+        or result.signal is None
+        or result.anomaly_score is None
+    ):
         raise CalibrationError(
             f"Cannot build CalibrationInput from non-success Autoencoder result: {result.status}"
         )
 
     sig = result.signal
     norm_method = (
-        config.score_normalization_method
-        if config
-        else "empirical_tail_ratio_sigmoid"
+        config.score_normalization_method if config else "empirical_tail_ratio_sigmoid"
     )
     norm_ver = config.score_normalization_version if config else "1.0.0"
     cfg_ver = config.schema_version if config else "1.0"
@@ -827,11 +864,17 @@ def calibration_input_from_signal(signal: AnomalySignal) -> CalibrationInput:
 
     if signal.evidence:
         ev = signal.evidence[0]
-        if "raw_score_samples" in ev.details and ev.details["raw_score_samples"] is not None:
+        if (
+            "raw_score_samples" in ev.details
+            and ev.details["raw_score_samples"] is not None
+        ):
             raw_score_val = float(ev.details["raw_score_samples"])
             raw_type = "score_samples"
             raw_direction = "lower_is_more_anomalous"
-        elif "raw_reconstruction_error" in ev.details and ev.details["raw_reconstruction_error"] is not None:
+        elif (
+            "raw_reconstruction_error" in ev.details
+            and ev.details["raw_reconstruction_error"] is not None
+        ):
             raw_score_val = float(ev.details["raw_reconstruction_error"])
             raw_type = "reconstruction_error"
         elif ev.deviation is not None:
@@ -856,7 +899,9 @@ def calibration_input_from_signal(signal: AnomalySignal) -> CalibrationInput:
     if signal.model_name in ("prophet", "isolation_forest", "autoencoder"):
         model_name = signal.model_name  # type: ignore[assignment]
     else:
-        raise CalibrationError(f"Unsupported model name in signal: '{signal.model_name}'")
+        raise CalibrationError(
+            f"Unsupported model name in signal: '{signal.model_name}'"
+        )
 
     return CalibrationInput(
         source_model_name=model_name,
@@ -886,7 +931,9 @@ def calibration_input_from_signal(signal: AnomalySignal) -> CalibrationInput:
     )
 
 
-def create_raw_comparison_record(input_data: CalibrationInput) -> ModelRawComparisonRecord:
+def create_raw_comparison_record(
+    input_data: CalibrationInput,
+) -> ModelRawComparisonRecord:
     """Create a structured ModelRawComparisonRecord from CalibrationInput."""
     return ModelRawComparisonRecord(
         model_name=input_data.source_model_name,

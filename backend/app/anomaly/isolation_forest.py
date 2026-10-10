@@ -6,14 +6,25 @@ import math
 from typing import Any, Literal
 import uuid
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 import sklearn
 from sklearn.ensemble import IsolationForest
 
 from app.anomaly.errors import (
     IsolationForestFitError,
 )
-from app.anomaly.features import FeatureExtractionResult, FeatureWindow, compute_quantile
+from app.anomaly.features import (
+    FeatureExtractionResult,
+    FeatureWindow,
+    compute_quantile,
+)
 from app.anomaly.models import (
     SUPPORTED_ANOMALY_SCHEMA_VERSION,
     AnomalyEvidence,
@@ -54,7 +65,9 @@ class IsolationForestBaselineConfig(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    schema_version: str = Field(default=SUPPORTED_IF_CONFIG_SCHEMA_VERSION, min_length=1)
+    schema_version: str = Field(
+        default=SUPPORTED_IF_CONFIG_SCHEMA_VERSION, min_length=1
+    )
     model_name: str = Field(default="isolation_forest", min_length=1)
     model_version: str = Field(default="1.0.0", min_length=1)
     feature_names: list[str] = Field(min_length=1)
@@ -126,7 +139,9 @@ class IsolationForestBaselineConfig(BaseModel):
                 raise ValueError(f"contamination string must be 'auto', got '{v}'")
             return "auto"
         if not math.isfinite(v) or v <= 0.0 or v > 0.5:
-            raise ValueError(f"contamination float must be in range (0.0, 0.5], got {v}")
+            raise ValueError(
+                f"contamination float must be in range (0.0, 0.5], got {v}"
+            )
         return float(v)
 
     @field_validator("random_state", mode="before")
@@ -144,7 +159,9 @@ class IsolationForestBaselineConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_threshold_hierarchy(self) -> IsolationForestBaselineConfig:
-        if not (self.warning_threshold <= self.error_threshold <= self.critical_threshold):
+        if not (
+            self.warning_threshold <= self.error_threshold <= self.critical_threshold
+        ):
             raise ValueError(
                 f"Threshold hierarchy invalid: warning ({self.warning_threshold}) <= "
                 f"error ({self.error_threshold}) <= critical ({self.critical_threshold})"
@@ -195,7 +212,9 @@ class IsolationForestBaseline:
             if method == "standard":
                 mean_val = sum(col_vals) / num_rows
                 if num_rows > 1:
-                    var_val = sum((v - mean_val) ** 2 for v in col_vals) / (num_rows - 1)
+                    var_val = sum((v - mean_val) ** 2 for v in col_vals) / (
+                        num_rows - 1
+                    )
                     std_val = math.sqrt(var_val)
                 else:
                     std_val = 0.0
@@ -269,7 +288,9 @@ class IsolationForestBaseline:
             X_train.append(row)
 
         # 2. Build target row X_target
-        X_target_row = [target_window.values[fname] for fname in self.config.feature_names]
+        X_target_row = [
+            target_window.values[fname] for fname in self.config.feature_names
+        ]
 
         # 3. Fit scaler only on training data
         scaler = self._fit_scaler(X_train)
@@ -277,7 +298,8 @@ class IsolationForestBaseline:
         X_target_scaled = self._transform([X_target_row], scaler)
 
         raw_vector = {
-            fname: X_target_row[idx] for idx, fname in enumerate(self.config.feature_names)
+            fname: X_target_row[idx]
+            for idx, fname in enumerate(self.config.feature_names)
         }
         scaled_vector = {
             fname: X_target_scaled[0][idx]
@@ -322,7 +344,9 @@ class IsolationForestBaseline:
 
             # Check for degenerate constant training series matching target
             is_constant_training = all(row == X_train[0] for row in X_train)
-            is_target_matching_constant = is_constant_training and (X_target_row == X_train[0])
+            is_target_matching_constant = is_constant_training and (
+                X_target_row == X_train[0]
+            )
 
             s_target = -raw_score
 
@@ -339,10 +363,14 @@ class IsolationForestBaseline:
                     self.config.score_normalization_parameters.get("scale_factor", 2.0)
                 )
                 epsilon_spread = float(
-                    self.config.score_normalization_parameters.get("epsilon_spread", 0.03)
+                    self.config.score_normalization_parameters.get(
+                        "epsilon_spread", 0.03
+                    )
                 )
                 scale = max(s_std * scale_factor, epsilon_spread)
-                anomaly_score = min(1.0, 0.30 + 0.70 * (1.0 - math.exp(-excess / scale)))
+                anomaly_score = min(
+                    1.0, 0.30 + 0.70 * (1.0 - math.exp(-excess / scale))
+                )
 
             anomaly_score = max(0.0, min(1.0, float(anomaly_score)))
 
@@ -387,7 +415,9 @@ class IsolationForestBaseline:
                 error_message="FeatureExtractionResult contains no windows",
             )
 
-        target_idx = (len(windows) - 1) if target_window_index is None else target_window_index
+        target_idx = (
+            (len(windows) - 1) if target_window_index is None else target_window_index
+        )
         if target_idx < 0 or target_idx >= len(windows):
             return IsolationForestScoreResult(
                 status=IsolationForestScoreStatus.INVALID_INPUT,
@@ -580,9 +610,7 @@ class IsolationForestBaseline:
         if not windows:
             return []
 
-        start = (
-            self.config.min_training_windows if start_index is None else start_index
-        )
+        start = self.config.min_training_windows if start_index is None else start_index
         if start < 0:
             start = 0
 

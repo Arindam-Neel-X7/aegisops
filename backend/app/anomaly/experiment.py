@@ -197,7 +197,9 @@ class FeatureWindowConfig(BaseModel):
     feature_names: list[str] = Field(min_length=1)
     window_size_seconds: float = Field(gt=0)
     step_size_seconds: float = Field(gt=0)
-    aggregation_methods: list[str] = Field(default_factory=lambda: ["mean", "p95", "std"])
+    aggregation_methods: list[str] = Field(
+        default_factory=lambda: ["mean", "p95", "std"]
+    )
     imputation_strategy: str = Field(default="forward_fill", min_length=1)
 
     @field_validator("feature_config_id", "imputation_strategy")
@@ -248,7 +250,9 @@ class ModelSpecification(BaseModel):
     calibration_version: str = Field(min_length=1)
     calibration_parameters: dict[str, Any] = Field(default_factory=dict)
 
-    @field_validator("model_name", "model_version", "calibration_method", "calibration_version")
+    @field_validator(
+        "model_name", "model_version", "calibration_method", "calibration_version"
+    )
     @classmethod
     def validate_model_strings(cls, v: str) -> str:
         if not v.strip():
@@ -341,7 +345,9 @@ class AnomalyExperimentConfig(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    schema_version: str = Field(default=SUPPORTED_EXPERIMENT_SCHEMA_VERSION, min_length=1)
+    schema_version: str = Field(
+        default=SUPPORTED_EXPERIMENT_SCHEMA_VERSION, min_length=1
+    )
     experiment_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     name: str = Field(min_length=1)
     description: str = ""
@@ -391,13 +397,17 @@ def serialize_experiment_config(config: AnomalyExperimentConfig) -> bytes:
         ) from exc
 
 
-def deserialize_experiment_config(raw: bytes | bytearray | memoryview) -> AnomalyExperimentConfig:
+def deserialize_experiment_config(
+    raw: bytes | bytearray | memoryview,
+) -> AnomalyExperimentConfig:
     """Deserialize UTF-8 encoded JSON bytes into an AnomalyExperimentConfig."""
     try:
         raw_bytes = bytes(raw)
         data: Any = json.loads(raw_bytes.decode("utf-8"))
         if not isinstance(data, dict):
-            raise AnomalyExperimentDeserializationError("Deserialized JSON root must be an object")
+            raise AnomalyExperimentDeserializationError(
+                "Deserialized JSON root must be an object"
+            )
 
         if "schema_version" in data:
             declared_version = data["schema_version"]

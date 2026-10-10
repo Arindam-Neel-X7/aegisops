@@ -203,7 +203,9 @@ def test_score_out_of_bounds_rejection(invalid_score: float) -> None:
         AnomalySignal(**kwargs)
 
 
-@pytest.mark.parametrize("non_finite_score", [float("nan"), float("inf"), float("-inf")])
+@pytest.mark.parametrize(
+    "non_finite_score", [float("nan"), float("inf"), float("-inf")]
+)
 def test_score_non_finite_rejection(non_finite_score: float) -> None:
     kwargs = _sample_signal_kwargs()
     kwargs["anomaly_score"] = non_finite_score
@@ -315,7 +317,9 @@ def test_time_window_validation() -> None:
     assert window_instant.start_time == window_instant.end_time
 
     # Reversed time window rejection
-    with pytest.raises(ValidationError, match="start_time .* cannot be greater than end_time"):
+    with pytest.raises(
+        ValidationError, match="start_time .* cannot be greater than end_time"
+    ):
         EventTimeWindow(start_time=t1, end_time=t0)
 
     # Naive datetime rejection
@@ -402,12 +406,15 @@ def test_deserialization_unsupported_version_rejected() -> None:
     data["schema_version"] = "2.0"
 
     import json
+
     payload_bytes = json.dumps(data).encode("utf-8")
     with pytest.raises(AnomalyDeserializationError, match="Unsupported schema_version"):
         deserialize_anomaly_signal(payload_bytes)
 
 
-@pytest.mark.parametrize("invalid_raw", [b"NOT_JSON_BYTES", b"123", b'"string_root"', b"[1, 2, 3]"])
+@pytest.mark.parametrize(
+    "invalid_raw", [b"NOT_JSON_BYTES", b"123", b'"string_root"', b"[1, 2, 3]"]
+)
 def test_deserialization_malformed_json_rejected(invalid_raw: bytes) -> None:
     with pytest.raises(AnomalyDeserializationError):
         deserialize_anomaly_signal(invalid_raw)
@@ -473,7 +480,9 @@ def test_deterministic_serialization_output() -> None:
 def test_kafka_key_and_topic_compatibility() -> None:
     signal = AnomalySignal(**_sample_signal_kwargs())
     key = construct_anomaly_kafka_key(signal)
-    expected_key = f"{signal.tenant_id}:{signal.environment}:{signal.service}".encode("utf-8")
+    expected_key = f"{signal.tenant_id}:{signal.environment}:{signal.service}".encode(
+        "utf-8"
+    )
     assert key == expected_key
 
     assert ANOMALY_KAFKA_TOPIC == KafkaTopic.ANOMALIES
@@ -506,5 +515,7 @@ def test_serialization_failure_wraps_in_anomaly_serialization_error() -> None:
     mock_signal.model_dump_json.side_effect = RuntimeError("Mock serialization failure")
     mock_signal.signal_id = signal.signal_id
 
-    with pytest.raises(AnomalySerializationError, match="Failed to serialize AnomalySignal"):
+    with pytest.raises(
+        AnomalySerializationError, match="Failed to serialize AnomalySignal"
+    ):
         serialize_anomaly_signal(mock_signal)  # type: ignore[arg-type]

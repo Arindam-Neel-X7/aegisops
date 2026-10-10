@@ -67,14 +67,22 @@ def _build_multivariate_feature_result(
 
     for i, lat in enumerate(latencies):
         t = t0 + timedelta(seconds=i * interval_seconds)
-        observations.append(_make_observation(event_time=t, value=lat, metric_name="http_request_duration_ms"))
+        observations.append(
+            _make_observation(
+                event_time=t, value=lat, metric_name="http_request_duration_ms"
+            )
+        )
         if requests is not None:
             observations.append(
-                _make_observation(event_time=t, value=requests[i], metric_name="http_requests_total")
+                _make_observation(
+                    event_time=t, value=requests[i], metric_name="http_requests_total"
+                )
             )
         if errors is not None:
             observations.append(
-                _make_observation(event_time=t, value=errors[i], metric_name="http_errors_total")
+                _make_observation(
+                    event_time=t, value=errors[i], metric_name="http_errors_total"
+                )
             )
 
     feature_names = ["http_request_duration_ms:mean"]
@@ -104,7 +112,10 @@ def _sample_ae_config(
     random_state: int = 42,
     solver: str = "lbfgs",
 ) -> AutoencoderBaselineConfig:
-    feats = feature_names or ["http_request_duration_ms:mean", "http_requests_total:mean"]
+    feats = feature_names or [
+        "http_request_duration_ms:mean",
+        "http_requests_total:mean",
+    ]
     return AutoencoderBaselineConfig(
         schema_version="1.0",
         model_name="autoencoder",
@@ -167,7 +178,9 @@ def test_ae_random_state_domain_validation() -> None:
     assert cfg_zero.random_state == 0
 
     # MAX_UINT32 accepted
-    cfg_max32 = AutoencoderBaselineConfig(feature_names=["a", "b"], random_state=MAX_UINT32)
+    cfg_max32 = AutoencoderBaselineConfig(
+        feature_names=["a", "b"], random_state=MAX_UINT32
+    )
     assert cfg_max32.random_state == 4294967295
 
     # 2**32 rejected
@@ -213,7 +226,11 @@ def test_valid_anomalous_controlled_multivariate_fixture() -> None:
     assert result.anomaly_score is not None
     assert result.anomaly_score > 0.60  # Severe anomaly has elevated score
     assert result.signal is not None
-    assert result.signal.severity in (EventSeverity.WARNING, EventSeverity.ERROR, EventSeverity.CRITICAL)
+    assert result.signal.severity in (
+        EventSeverity.WARNING,
+        EventSeverity.ERROR,
+        EventSeverity.CRITICAL,
+    )
 
 
 def test_anomalous_score_higher_than_normal_fixture() -> None:
@@ -235,7 +252,10 @@ def test_anomalous_score_higher_than_normal_fixture() -> None:
     assert res_norm.anomaly_score is not None
     assert res_anom.anomaly_score is not None
     assert res_anom.anomaly_score > res_norm.anomaly_score
-    assert res_anom.raw_reconstruction_error is not None and res_norm.raw_reconstruction_error is not None
+    assert (
+        res_anom.raw_reconstruction_error is not None
+        and res_norm.raw_reconstruction_error is not None
+    )
     assert res_anom.raw_reconstruction_error > res_norm.raw_reconstruction_error
 
 
@@ -253,7 +273,9 @@ def test_deterministic_repeated_execution_with_same_seeds() -> None:
     res2 = baseline2.score_target_window(feat_res, target_window_index=19)
 
     assert res1.status == res2.status == AutoencoderScoreStatus.SUCCESS
-    assert res1.raw_reconstruction_error == pytest.approx(res2.raw_reconstruction_error, rel=1e-5)
+    assert res1.raw_reconstruction_error == pytest.approx(
+        res2.raw_reconstruction_error, rel=1e-5
+    )
     assert res1.anomaly_score == pytest.approx(res2.anomaly_score, rel=1e-5)
     assert res1.actual_iterations == res2.actual_iterations
 
@@ -283,7 +305,10 @@ def test_schema_valid_anomaly_signal_output() -> None:
 
     ev = signal.evidence[0]
     assert ev.evidence_type == "autoencoder_reconstruction_error"
-    assert ev.details["ordered_features"] == ["http_request_duration_ms:mean", "http_requests_total:mean"]
+    assert ev.details["ordered_features"] == [
+        "http_request_duration_ms:mean",
+        "http_requests_total:mean",
+    ]
     assert "raw_input_vector" in ev.details
     assert "scaled_input_vector" in ev.details
     assert "reconstructed_vector" in ev.details
@@ -421,7 +446,10 @@ def test_missing_feature_in_target_window() -> None:
         seed=42,
         reproducibility_key="rep-1",
         feature_config_id="cfg-1",
-        values={"http_request_duration_ms:mean": 100.0, "http_requests_total:mean": 10.0},
+        values={
+            "http_request_duration_ms:mean": 100.0,
+            "http_requests_total:mean": 10.0,
+        },
     )
     w1 = FeatureWindow(
         window_index=1,
@@ -474,8 +502,20 @@ def test_missing_feature_in_target_window() -> None:
 
 def test_score_series_sequential_causal_evaluation() -> None:
     # 20 windows: 0..14 normal with variance, 15..19 severe anomaly (off-manifold latency spikes)
-    latencies = [100.0 + (i % 5) * 4.0 for i in range(15)] + [500.0, 600.0, 700.0, 800.0, 900.0]
-    requests = [10.0 + (i % 3) * 2.0 for i in range(15)] + [10.0, 10.0, 10.0, 10.0, 10.0]
+    latencies = [100.0 + (i % 5) * 4.0 for i in range(15)] + [
+        500.0,
+        600.0,
+        700.0,
+        800.0,
+        900.0,
+    ]
+    requests = [10.0 + (i % 3) * 2.0 for i in range(15)] + [
+        10.0,
+        10.0,
+        10.0,
+        10.0,
+        10.0,
+    ]
 
     feat_res = _build_multivariate_feature_result(latencies, requests=requests)
     cfg = _sample_ae_config(min_history=10)
@@ -488,9 +528,15 @@ def test_score_series_sequential_causal_evaluation() -> None:
         assert r.status == AutoencoderScoreStatus.SUCCESS
 
     # Anomalous windows (15..19) score significantly higher than baseline windows (10..14)
-    baseline_scores = [r.anomaly_score for r in series_results[:5] if r.anomaly_score is not None]
-    anom_scores = [r.anomaly_score for r in series_results[5:] if r.anomaly_score is not None]
-    assert sum(anom_scores) / len(anom_scores) > sum(baseline_scores) / len(baseline_scores)
+    baseline_scores = [
+        r.anomaly_score for r in series_results[:5] if r.anomaly_score is not None
+    ]
+    anom_scores = [
+        r.anomaly_score for r in series_results[5:] if r.anomaly_score is not None
+    ]
+    assert sum(anom_scores) / len(anom_scores) > sum(baseline_scores) / len(
+        baseline_scores
+    )
     for r in series_results[5:]:
         assert r.anomaly_score is not None and r.anomaly_score > 0.60
 
@@ -557,8 +603,12 @@ def test_corrupt_and_missing_artifact_handling() -> None:
 
         # Unsupported schema version
         bad_ver_path = Path(tmp_dir) / "bad_version.json"
-        bad_ver_path.write_text('{"artifact_schema_version": "99.0.0"}', encoding="utf-8")
-        with pytest.raises(AutoencoderArtifactError, match="Unsupported artifact schema version"):
+        bad_ver_path.write_text(
+            '{"artifact_schema_version": "99.0.0"}', encoding="utf-8"
+        )
+        with pytest.raises(
+            AutoencoderArtifactError, match="Unsupported artifact schema version"
+        ):
             AutoencoderArtifact.load(bad_ver_path)
 
 
@@ -605,7 +655,9 @@ def test_non_convergence_artifact_export_rejection() -> None:
     )
     baseline = AutoencoderBaseline(config=cfg)
 
-    with pytest.raises(AutoencoderArtifactError, match="Cannot export artifact from non-converged"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="Cannot export artifact from non-converged"
+    ):
         baseline.export_artifact(feat_res, target_window_index=19)
 
 
@@ -625,7 +677,10 @@ def _sample_valid_artifact_dict() -> dict[str, Any]:
         "solver": "lbfgs",
         "scaling_parameters": {
             "method": "standard",
-            "feature_names": ["http_request_duration_ms:mean", "http_requests_total:mean"],
+            "feature_names": [
+                "http_request_duration_ms:mean",
+                "http_requests_total:mean",
+            ],
             "centers": [100.0, 10.0],
             "scales": [5.0, 2.0],
         },
@@ -648,11 +703,11 @@ def _sample_valid_artifact_dict() -> dict[str, Any]:
         },
         "coefs": [
             [[0.5], [0.5]],  # 2x1 input -> bottleneck
-            [[0.5, 0.5]],    # 1x2 bottleneck -> output
+            [[0.5, 0.5]],  # 1x2 bottleneck -> output
         ],
         "intercepts": [
-            [0.1],      # bottleneck bias
-            [0.1, 0.1], # output bias
+            [0.1],  # bottleneck bias
+            [0.1, 0.1],  # output bias
         ],
     }
 
@@ -670,7 +725,9 @@ def test_artifact_incompatible_model_or_config_version() -> None:
 
     data = _sample_valid_artifact_dict()
     data["configuration_schema_version"] = "99.0"
-    with pytest.raises(AutoencoderArtifactError, match="Unsupported configuration_schema_version"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="Unsupported configuration_schema_version"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data))
 
 
@@ -678,13 +735,17 @@ def test_artifact_reconstruction_method_and_version_validation() -> None:
     # Missing / unsupported reconstruction method
     data = _sample_valid_artifact_dict()
     data["reconstruction_error_method"] = "root_mean_squared_error"
-    with pytest.raises(AutoencoderArtifactError, match="Unsupported reconstruction_error_method"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="Unsupported reconstruction_error_method"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data))
 
     # Unsupported reconstruction error version
     data = _sample_valid_artifact_dict()
     data["reconstruction_error_version"] = "2.0.0"
-    with pytest.raises(AutoencoderArtifactError, match="Unsupported reconstruction_error_version"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="Unsupported reconstruction_error_version"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data))
 
 
@@ -704,19 +765,25 @@ def test_artifact_final_loss_validation_domain() -> None:
     # Negative loss is rejected
     data_neg = _sample_valid_artifact_dict()
     data_neg["training_stats"]["final_loss"] = -0.001
-    with pytest.raises(AutoencoderArtifactError, match="must be a finite non-negative float"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="must be a finite non-negative float"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data_neg))
 
     # NaN loss is rejected
     data_nan = _sample_valid_artifact_dict()
     data_nan["training_stats"]["final_loss"] = float("nan")
-    with pytest.raises(AutoencoderArtifactError, match="must be a finite non-negative float"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="must be a finite non-negative float"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data_nan))
 
     # +Inf loss is rejected
     data_inf = _sample_valid_artifact_dict()
     data_inf["training_stats"]["final_loss"] = float("inf")
-    with pytest.raises(AutoencoderArtifactError, match="must be a finite non-negative float"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="must be a finite non-negative float"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data_inf))
 
     # Missing / None loss is rejected
@@ -740,14 +807,18 @@ def test_artifact_incompatible_framework_name_or_version() -> None:
 
     data = _sample_valid_artifact_dict()
     data["framework_version"] = "0.24.2"
-    with pytest.raises(AutoencoderArtifactError, match="Incompatible framework_version"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="Incompatible framework_version"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data))
 
 
 def test_artifact_missing_or_invalid_scaling_metadata() -> None:
     data = _sample_valid_artifact_dict()
     data["scaling_parameters"]["centers"] = [100.0]  # Mismatch dimension (1 vs 2)
-    with pytest.raises(AutoencoderArtifactError, match="scaling_parameters centers length mismatch"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="scaling_parameters centers length mismatch"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data))
 
     data = _sample_valid_artifact_dict()
@@ -759,12 +830,16 @@ def test_artifact_missing_or_invalid_scaling_metadata() -> None:
 def test_artifact_missing_or_invalid_normalization_metadata() -> None:
     data = _sample_valid_artifact_dict()
     data["score_normalization_method"] = "unsupported_method"
-    with pytest.raises(AutoencoderArtifactError, match="Unsupported score_normalization_method"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="Unsupported score_normalization_method"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data))
 
     data = _sample_valid_artifact_dict()
     data["score_normalization_parameters"] = {}  # Missing parameters
-    with pytest.raises(AutoencoderArtifactError, match="Missing required normalization parameter"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="Missing required normalization parameter"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data))
 
 
@@ -776,7 +851,9 @@ def test_artifact_non_converged_or_non_finite_loss_rejection() -> None:
 
     data = _sample_valid_artifact_dict()
     data["training_stats"]["final_loss"] = None
-    with pytest.raises(AutoencoderArtifactError, match="final_loss must be a numeric float"):
+    with pytest.raises(
+        AutoencoderArtifactError, match="final_loss must be a numeric float"
+    ):
         AutoencoderArtifact.from_json(json.dumps(data))
 
 

@@ -95,7 +95,12 @@ def _sample_model(model_name: str = "isolation_forest") -> ModelSpecification:
 
 def _sample_evaluation() -> EvaluationDeclaration:
     return EvaluationDeclaration(
-        requested_metrics=["precision", "recall", "f1_score", "detection_delay_seconds"],
+        requested_metrics=[
+            "precision",
+            "recall",
+            "f1_score",
+            "detection_delay_seconds",
+        ],
         target_service="order-service",
         ground_truth_reference="research/ground_truth/cpu_saturation_truth.json",
     )
@@ -104,7 +109,11 @@ def _sample_evaluation() -> EvaluationDeclaration:
 def _sample_outputs() -> OutputDeclaration:
     return OutputDeclaration(
         artifact_root="research/results/phase3/exp_cpu_saturation_01",
-        requested_outputs=["anomaly_signals", "evaluation_summary", "residual_timeseries"],
+        requested_outputs=[
+            "anomaly_signals",
+            "evaluation_summary",
+            "residual_timeseries",
+        ],
         save_intermediate_features=False,
     )
 
@@ -244,7 +253,10 @@ def test_feature_window_validation() -> None:
     assert fw.step_size_seconds == 10.0
 
     # step_size > window_size rejected
-    with pytest.raises(ValidationError, match="step_size_seconds .* cannot be greater than window_size_seconds"):
+    with pytest.raises(
+        ValidationError,
+        match="step_size_seconds .* cannot be greater than window_size_seconds",
+    ):
         FeatureWindowConfig(
             feature_config_id="features-v1",
             feature_names=["latency"],
@@ -302,7 +314,9 @@ def test_evaluation_and_output_declaration_validation() -> None:
         )
 
     # Metric containing embedded measured values rejected (e.g. "f1=0.92")
-    with pytest.raises(ValidationError, match="must declare metric names, not measured values"):
+    with pytest.raises(
+        ValidationError, match="must declare metric names, not measured values"
+    ):
         EvaluationDeclaration(
             requested_metrics=["f1_score=0.95"],
             target_service="order-service",
@@ -467,7 +481,12 @@ def test_deterministic_serialization_and_round_trip() -> None:
     assert restored.model.model_name == "autoencoder"
     assert restored.dataset.dataset_id == "aegis-telemetry-corpus"
     assert restored.feature_window.window_size_seconds == 60.0
-    assert restored.evaluation.requested_metrics == ["precision", "recall", "f1_score", "detection_delay_seconds"]
+    assert restored.evaluation.requested_metrics == [
+        "precision",
+        "recall",
+        "f1_score",
+        "detection_delay_seconds",
+    ]
 
     # Determinism
     raw_bytes2 = serialize_experiment_config(config2)
@@ -480,21 +499,31 @@ def test_deserialization_unsupported_version_rejected() -> None:
     data["schema_version"] = "2.0"
 
     import json
+
     raw = json.dumps(data).encode("utf-8")
-    with pytest.raises(AnomalyExperimentDeserializationError, match="Unsupported schema_version"):
+    with pytest.raises(
+        AnomalyExperimentDeserializationError, match="Unsupported schema_version"
+    ):
         deserialize_experiment_config(raw)
 
 
-@pytest.mark.parametrize("invalid_raw", [b"INVALID_JSON", b"12345", b'"just_a_string"', b"[1, 2, 3]"])
+@pytest.mark.parametrize(
+    "invalid_raw", [b"INVALID_JSON", b"12345", b'"just_a_string"', b"[1, 2, 3]"]
+)
 def test_deserialization_malformed_json_rejected(invalid_raw: bytes) -> None:
     with pytest.raises(AnomalyExperimentDeserializationError):
         deserialize_experiment_config(invalid_raw)
 
 
-def test_serialization_failure_wraps_in_anomaly_experiment_serialization_error() -> None:
+def test_serialization_failure_wraps_in_anomaly_experiment_serialization_error() -> (
+    None
+):
     mock_config = MagicMock(spec=AnomalyExperimentConfig)
     mock_config.model_dump_json.side_effect = RuntimeError("Mock dump failure")
     mock_config.experiment_id = uuid.uuid4()
 
-    with pytest.raises(AnomalyExperimentSerializationError, match="Failed to serialize AnomalyExperimentConfig"):
+    with pytest.raises(
+        AnomalyExperimentSerializationError,
+        match="Failed to serialize AnomalyExperimentConfig",
+    ):
         serialize_experiment_config(mock_config)  # type: ignore[arg-type]

@@ -3,10 +3,17 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
 import math
-from typing import Any, Sequence
+from typing import Any, Sequence, cast
 import uuid
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.anomaly.errors import (
     FeatureExtractionError,
@@ -154,7 +161,9 @@ def compute_aggregation(
         return float(n)
     elif m == "rate":
         if window_duration_seconds <= 0:
-            raise ValueError("window_duration_seconds must be positive for rate aggregation")
+            raise ValueError(
+                "window_duration_seconds must be positive for rate aggregation"
+            )
         return float(n) / window_duration_seconds
     elif m in ("std", "stddev"):
         if n < 2:
@@ -260,7 +269,9 @@ class FeatureExtractionResult(BaseModel):
         target_feature = feature_name
         if target_feature is None:
             if not self.feature_names:
-                raise FeatureExtractionError("No feature names declared in FeatureExtractionResult")
+                raise FeatureExtractionError(
+                    "No feature names declared in FeatureExtractionResult"
+                )
             target_feature = self.feature_names[0]
 
         if target_feature not in self.feature_names:
@@ -314,7 +325,9 @@ class FeatureExtractionResult(BaseModel):
           and columns correspond strictly to the ordered `feature_names`.
         - `windows`: Corresponding list of `FeatureWindow` metadata preserving timestamps and provenance.
         """
-        ordered_features = feature_names if feature_names is not None else self.feature_names
+        ordered_features = (
+            feature_names if feature_names is not None else self.feature_names
+        )
         for fname in ordered_features:
             if fname not in self.feature_names:
                 raise FeatureExtractionError(
@@ -326,7 +339,9 @@ class FeatureExtractionResult(BaseModel):
 
         for w in self.windows:
             missing_in_window = [
-                f for f in ordered_features if f not in w.values or f in w.missing_features
+                f
+                for f in ordered_features
+                if f not in w.values or f in w.missing_features
             ]
             if missing_in_window:
                 if not allow_incomplete:
@@ -363,7 +378,9 @@ class FeatureExtractionResult(BaseModel):
         Shape: `[num_sequences, sequence_length, num_features]`.
         """
         if sequence_length <= 0:
-            raise FeatureExtractionError(f"sequence_length must be positive, got {sequence_length}")
+            raise FeatureExtractionError(
+                f"sequence_length must be positive, got {sequence_length}"
+            )
 
         matrix, windows = self.to_autoencoder_matrix(
             feature_names=feature_names, allow_incomplete=allow_incomplete
@@ -385,7 +402,9 @@ class FeatureExtractionResult(BaseModel):
         return sequences, window_sequences
 
 
-def _parse_feature_declaration(feature_decl: str, default_aggregation: str) -> tuple[str, str]:
+def _parse_feature_declaration(
+    feature_decl: str, default_aggregation: str
+) -> tuple[str, str]:
     """Parse a feature declaration into (metric_name, aggregation_method).
 
     Supports:
@@ -398,9 +417,13 @@ def _parse_feature_declaration(feature_decl: str, default_aggregation: str) -> t
         metric = parts[0].strip()
         agg = parts[1].strip()
         if not metric:
-            raise InvalidFeatureInputError(f"Empty metric name in feature declaration: '{feature_decl}'")
+            raise InvalidFeatureInputError(
+                f"Empty metric name in feature declaration: '{feature_decl}'"
+            )
         if not agg:
-            raise InvalidFeatureInputError(f"Empty aggregation in feature declaration: '{feature_decl}'")
+            raise InvalidFeatureInputError(
+                f"Empty aggregation in feature declaration: '{feature_decl}'"
+            )
         return metric, agg
     return clean, default_aggregation
 
@@ -422,7 +445,9 @@ class DeterministicFeatureExtractor:
         window_timestamp_alignment: str = "end",
     ) -> None:
         if warm_up_windows < 0:
-            raise InvalidFeatureInputError(f"warm_up_windows must be non-negative, got {warm_up_windows}")
+            raise InvalidFeatureInputError(
+                f"warm_up_windows must be non-negative, got {warm_up_windows}"
+            )
         if min_samples_per_window < 0:
             raise InvalidFeatureInputError(
                 f"min_samples_per_window must be non-negative, got {min_samples_per_window}"
@@ -433,13 +458,17 @@ class DeterministicFeatureExtractor:
             )
 
         self.config = config
-        self.target_service = target_service.strip() if target_service is not None else None
+        self.target_service = (
+            target_service.strip() if target_service is not None else None
+        )
         self.warm_up_windows = warm_up_windows
         self.min_samples_per_window = min_samples_per_window
         self.window_timestamp_alignment = window_timestamp_alignment
 
         default_agg = (
-            self.config.aggregation_methods[0] if self.config.aggregation_methods else "mean"
+            self.config.aggregation_methods[0]
+            if self.config.aggregation_methods
+            else "mean"
         )
         self.parsed_features: list[tuple[str, str, str]] = []
         for fdecl in self.config.feature_names:
@@ -462,21 +491,29 @@ class DeterministicFeatureExtractor:
             filtered_obs.append(obs)
 
         # 2. Extract execution context
-        resolved_service = self.target_service or (filtered_obs[0].service if filtered_obs else "unknown")
+        resolved_service = self.target_service or (
+            filtered_obs[0].service if filtered_obs else "unknown"
+        )
 
         resolved_tenant_id: uuid.UUID
         if filtered_obs:
             resolved_tenant_id = filtered_obs[0].tenant_id
         elif execution_context and "tenant_id" in execution_context:
             t_val = execution_context["tenant_id"]
-            resolved_tenant_id = t_val if isinstance(t_val, uuid.UUID) else uuid.UUID(str(t_val))
+            resolved_tenant_id = (
+                t_val if isinstance(t_val, uuid.UUID) else uuid.UUID(str(t_val))
+            )
         else:
             resolved_tenant_id = uuid.UUID(int=0)
 
         resolved_environment: str = (
             filtered_obs[0].environment
             if filtered_obs
-            else str(execution_context.get("environment", "simulation") if execution_context else "simulation")
+            else str(
+                execution_context.get("environment", "simulation")
+                if execution_context
+                else "simulation"
+            )
         )
 
         resolved_run_id: uuid.UUID
@@ -484,19 +521,29 @@ class DeterministicFeatureExtractor:
             resolved_run_id = filtered_obs[0].run_id
         elif execution_context and "run_id" in execution_context:
             r_val = execution_context["run_id"]
-            resolved_run_id = r_val if isinstance(r_val, uuid.UUID) else uuid.UUID(str(r_val))
+            resolved_run_id = (
+                r_val if isinstance(r_val, uuid.UUID) else uuid.UUID(str(r_val))
+            )
         else:
             resolved_run_id = uuid.UUID(int=0)
 
         resolved_scenario_id: str = (
             filtered_obs[0].scenario_id
             if filtered_obs
-            else str(execution_context.get("scenario_id", "unknown") if execution_context else "unknown")
+            else str(
+                execution_context.get("scenario_id", "unknown")
+                if execution_context
+                else "unknown"
+            )
         )
         resolved_scenario_version: str = (
             filtered_obs[0].scenario_version
             if filtered_obs
-            else str(execution_context.get("scenario_version", "1.0.0") if execution_context else "1.0.0")
+            else str(
+                execution_context.get("scenario_version", "1.0.0")
+                if execution_context
+                else "1.0.0"
+            )
         )
         resolved_seed: int = (
             filtered_obs[0].seed
@@ -506,7 +553,11 @@ class DeterministicFeatureExtractor:
         resolved_repro_key: str = (
             filtered_obs[0].reproducibility_key
             if filtered_obs
-            else str(execution_context.get("reproducibility_key", "default") if execution_context else "default")
+            else str(
+                execution_context.get("reproducibility_key", "default")
+                if execution_context
+                else "default"
+            )
         )
 
         if not filtered_obs:
@@ -573,7 +624,9 @@ class DeterministicFeatureExtractor:
             elif self.window_timestamp_alignment == "start":
                 obs_ts = cur_start
             else:  # center
-                obs_ts = cur_start + timedelta(seconds=self.config.window_size_seconds / 2.0)
+                obs_ts = cur_start + timedelta(
+                    seconds=self.config.window_size_seconds / 2.0
+                )
 
             # Collect observations falling in [cur_start, cur_end)
             win_obs = [o for o in deduped_obs if cur_start <= o.event_time < cur_end]
@@ -584,7 +637,9 @@ class DeterministicFeatureExtractor:
             raw_sample_count: dict[str, int] = {}
             for o in win_obs:
                 metric_values.setdefault(o.metric_name, []).append(o.value)
-                raw_sample_count[o.metric_name] = raw_sample_count.get(o.metric_name, 0) + 1
+                raw_sample_count[o.metric_name] = (
+                    raw_sample_count.get(o.metric_name, 0) + 1
+                )
 
             # Compute features for window
             feature_values: dict[str, float] = {}
@@ -637,8 +692,15 @@ class DeterministicFeatureExtractor:
                                 imputed_features.append(mf)
                         is_imputed = True
                         unresolved_missing = []
-                        if status in (FeatureWindowStatus.EMPTY, FeatureWindowStatus.INSUFFICIENT_DATA):
-                            status = FeatureWindowStatus.WARMUP if is_warmup else FeatureWindowStatus.IMPUTED
+                        if status in (
+                            FeatureWindowStatus.EMPTY,
+                            FeatureWindowStatus.INSUFFICIENT_DATA,
+                        ):
+                            status = (
+                                FeatureWindowStatus.WARMUP
+                                if is_warmup
+                                else FeatureWindowStatus.IMPUTED
+                            )
                     else:
                         # First window missing data: zero-fill fallback
                         for mf in missing_features:
@@ -646,16 +708,30 @@ class DeterministicFeatureExtractor:
                             imputed_features.append(mf)
                         is_imputed = True
                         unresolved_missing = []
-                        if status in (FeatureWindowStatus.EMPTY, FeatureWindowStatus.INSUFFICIENT_DATA):
-                            status = FeatureWindowStatus.WARMUP if is_warmup else FeatureWindowStatus.IMPUTED
+                        if status in (
+                            FeatureWindowStatus.EMPTY,
+                            FeatureWindowStatus.INSUFFICIENT_DATA,
+                        ):
+                            status = (
+                                FeatureWindowStatus.WARMUP
+                                if is_warmup
+                                else FeatureWindowStatus.IMPUTED
+                            )
                 elif strategy == ImputationStrategy.ZERO_FILL.value:
                     for mf in missing_features:
                         feature_values[mf] = 0.0
                         imputed_features.append(mf)
                     is_imputed = True
                     unresolved_missing = []
-                    if status in (FeatureWindowStatus.EMPTY, FeatureWindowStatus.INSUFFICIENT_DATA):
-                        status = FeatureWindowStatus.WARMUP if is_warmup else FeatureWindowStatus.IMPUTED
+                    if status in (
+                        FeatureWindowStatus.EMPTY,
+                        FeatureWindowStatus.INSUFFICIENT_DATA,
+                    ):
+                        status = (
+                            FeatureWindowStatus.WARMUP
+                            if is_warmup
+                            else FeatureWindowStatus.IMPUTED
+                        )
                 elif strategy == ImputationStrategy.NONE.value:
                     # Strategy 'none': perform NO imputation, record missing features explicitly,
                     # and do NOT insert fabricated numeric values into feature_values dict.
@@ -706,7 +782,11 @@ class DeterministicFeatureExtractor:
             1
             for w in windows
             if w.status
-            in (FeatureWindowStatus.COMPLETE, FeatureWindowStatus.IMPUTED, FeatureWindowStatus.WARMUP)
+            in (
+                FeatureWindowStatus.COMPLETE,
+                FeatureWindowStatus.IMPUTED,
+                FeatureWindowStatus.WARMUP,
+            )
             and len(w.missing_features) == 0
         )
 
@@ -870,14 +950,18 @@ def extract_features(
     """High-level deterministic feature extraction and observation windowing entry point."""
     observations: list[RawObservation]
     if isinstance(input_data, ScenarioRunResult):
-        observations = observations_from_scenario_result(input_data, target_service=target_service)
+        observations = observations_from_scenario_result(
+            input_data, target_service=target_service
+        )
     elif input_data and isinstance(input_data[0], RawObservation):
         observations = list(input_data)  # type: ignore[arg-type]
     elif input_data and isinstance(input_data[0], MetricSample):
         observations = observations_from_metric_samples(input_data)  # type: ignore[arg-type]
     elif input_data and isinstance(input_data[0], TelemetryEvent):
         observations = observations_from_telemetry_events(
-            input_data, context=context, target_service=target_service  # type: ignore[arg-type]
+            cast(Sequence[TelemetryEvent], input_data),
+            context=context,
+            target_service=target_service,
         )
     else:
         observations = []

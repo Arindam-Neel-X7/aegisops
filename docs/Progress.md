@@ -2358,3 +2358,362 @@ Phase 3 — ML Anomaly Detection & Scoring
 
 Phase 3 implementation is NOT authorized by this progress record. A dedicated Phase 3 plan and design task must be explicitly reviewed and authorized before implementation begins.
 Do not retroactively modify frozen Phase 0, Phase 1, or Phase 2 contracts without explicit change control.
+
+## Phase 3 — ML Anomaly Detection and Scoring
+
+Status: COMPLETE — APPROVED — FROZEN BY THE CLOSURE COMMIT CONTAINING THIS RECORD
+
+Phase 3 converts the frozen Phase 2 telemetry and simulator evidence into reproducible, versioned anomaly signals. It compares three model families under common conditions, calibrates their scores, generates a canonical evaluation package, publishes anomaly signals to Kafka, exposes a Phase 4-facing handoff contract, and records operational/reproducibility evidence without implementing Phase 4 incident correlation.
+
+### Phase 3 objective achieved
+
+Phase 3 now provides:
+
+- a strict, versioned `AnomalySignal` contract with evidence, model identity, calibrated score, severity, source-event lineage, scenario/run provenance, and event-time boundaries;
+- deterministic experiment configuration and feature-window contracts;
+- Prophet, Isolation Forest, and Autoencoder anomaly baselines over a shared feature representation;
+- versioned score calibration and severity mapping;
+- a common evaluation harness with raw, processed, visual, and human-readable research artifacts;
+- detached Kafka publication to `aegis.ml.anomalies`;
+- a validated Phase 4-facing handoff interface with no Phase 4 runtime implementation;
+- structured operational measurements and failure records;
+- semantic fingerprints supporting explicit retry and replay identity verification; and
+- complete unit, integration, infrastructure, artifact, scope, and regression closure evidence.
+
+### Phase 3 execution history
+
+| Task | Deliverable | Final status | Commit |
+|---|---|---|---|
+| 3.1 | Existing runtime audit and Phase 3 boundary | COMPLETE — APPROVED | Audit-only; no commit |
+| 3.2 | Anomaly contract and versioning | COMPLETE — APPROVED | `517551f6f5f37c03ccc6bb54608bd12e1f78e8ac` |
+| 3.3 | Experiment configuration and dataset boundary | COMPLETE — APPROVED | `c1c1a82c69feb79ba0877e155fc5e2385ec5f75c` |
+| 3.4 | Deterministic feature extraction and windowing | COMPLETE — APPROVED | `bd17b2abf35fcfe0aad2f0c698662ca1a6e9e049` |
+| 3.5 | Prophet anomaly baseline | COMPLETE — APPROVED | `e12580fd2b81fbc7ab62dc83991b585b05e6aaa7` |
+| 3.6 | Isolation Forest anomaly baseline | COMPLETE — APPROVED | `f750735298c970e4610d119940b6050c6af5dd80` |
+| 3.7 | Autoencoder anomaly baseline | COMPLETE — APPROVED | `03c93c60364240b6300934bef5e4b58af097548a` |
+| 3.8 | Score calibration and severity mapping | COMPLETE — APPROVED | `481652c2047a59e697c3008115da0faefcbbde01` |
+| 3.9 | Evaluation harness and comparison reports | COMPLETE — APPROVED | `c74f48bb079e13617a107ffe4654b04f44012abf` |
+| 3.10 | Anomaly publication and Phase 4 interface | COMPLETE — APPROVED | `d9b8c9eb7e583e0239f903e74398a8dc79134ff5` |
+| 3.11 | Observability, reproducibility, and failure paths | COMPLETE — APPROVED | `49d9e396d4b1cef448f3b3ac95dfaf4078ba66c1` |
+| 3.12 | Regression and Phase 3 closure audit | COMPLETE — APPROVED | Closure commit containing this progress record |
+
+The verified linear Phase 3 lineage begins at the Phase 2 freeze commit `41d63d6297dce52c5a83f58052a1cb7d00565e10` and continues through the commits shown above. The Task 3.12 closure commit applies the approved formatting/type-stability correction and this progress update.
+
+### Runtime architecture delivered
+
+```text
+Frozen Phase 2 telemetry / completed ScenarioRunResult
+        |
+        v
+Deterministic feature extraction and event-time windows
+        |
+        +--------------------+----------------------+------------------+
+        |                    |                      |
+        v                    v                      v
+     Prophet        Isolation Forest          Autoencoder
+        |                    |                      |
+        +--------------------+----------------------+
+                             v
+              versioned score calibration
+                             |
+                             v
+                severity and decision mapping
+                             |
+                +------------+-------------+
+                |                          |
+                v                          v
+       evaluation package          AnomalySignal builder
+                                           |
+                                           v
+                               aegis.ml.anomalies publisher
+                                           |
+                                           v
+                            validated Phase 4 handoff only
+```
+
+The anomaly subsystem remains detached from `ScenarioRunner`. It consumes completed immutable simulator/telemetry results and does not add ML dependencies to the simulator runtime.
+
+### Contract and versioning boundary
+
+The canonical output is `AnomalySignal`, supported by `AnomalyEvidence`, `CalibrationMetadata`, and `EventTimeWindow`.
+
+The contract preserves, where applicable:
+
+- schema version;
+- signal ID and event time;
+- tenant, environment, service, and metric/feature identity;
+- model name and model version;
+- finite anomaly score bounded to `[0.0, 1.0]`;
+- severity and calibration metadata;
+- run ID, scenario ID/version, seed, and reproducibility key;
+- ordered source event IDs and source event-time window; and
+- structured evidence that remains distinct from simulator ground truth.
+
+Serialization is deterministic and routes anomaly output only to `aegis.ml.anomalies`. Existing Phase 2 telemetry schemas, topics, consumers, persistence, query, quarantine, replay, and readiness contracts remain unchanged.
+
+### Experiment and feature boundary
+
+Phase 3 separates configuration from measured results. Experiment configuration records experiment/package identity, scenario and dataset selection, requested features, seeds, model/calibration versions, output locations, and code revision. It rejects secret-bearing values and machine-specific absolute paths.
+
+Feature extraction:
+
+- operates on event time rather than Kafka publication time;
+- preserves source event identities and scenario/run lineage;
+- uses deterministic ordering, aggregation, windowing, warm-up, and missing-data rules;
+- exposes one comparable feature representation to all three model families; and
+- keeps target/future/ground-truth data out of model training and calibration reference partitions.
+
+Task 3.12 replaced a formatter-fragile Mypy suppression with an explicit `cast(Sequence[TelemetryEvent], input_data)`. This is a typing-only correction and does not change runtime behavior.
+
+### Model baselines
+
+#### Prophet
+
+- Interpretable time-series forecast/deviation baseline.
+- Uses historical windows only; the target and future remain excluded from fitting.
+- Produces forecast bounds, deviation evidence, and a normalized score.
+- Handles insufficient history, missing/non-finite data, and fit failures explicitly.
+
+#### Isolation Forest
+
+- Seeded multivariate anomaly baseline over the shared feature matrix.
+- Records scaling, contamination/configuration, random state, model version, and raw score direction.
+- Converts the scikit-learn score direction into the common higher-means-more-anomalous score.
+- Preserves ordered raw/scaled feature evidence and excludes target/future windows from fitting.
+
+#### Autoencoder
+
+- Bounded feed-forward reconstruction-error baseline using the shared feature representation.
+- Records architecture, preprocessing/scaling, initialization/training seeds, framework version, normalization parameters, and fitted artifact metadata.
+- Fits scaling and the reconstruction-error reference distribution from training windows only.
+- Suppresses score/signal/artifact export on non-convergence and rejects non-finite or shape-invalid artifacts.
+
+These models are research baselines. Phase 3 does not claim that one model is universally superior or production-ready.
+
+### Calibration, decisions, and severity
+
+All model outputs use the same score direction and `[0.0, 1.0]` range. Calibration preserves method/version, fitted reference partition lineage, split metadata, normalization parameters, and target identity. Target, future, truth-label, and cross-partition leakage are rejected.
+
+Default severity thresholds:
+
+| Severity | Calibrated score interval |
+|---|---|
+| DEBUG | `[0.00, 0.20)` |
+| INFO | `[0.20, 0.50)` |
+| WARNING | `[0.50, 0.75)` |
+| ERROR | `[0.75, 0.90)` |
+| CRITICAL | `[0.90, 1.00]` |
+
+The canonical binary decision threshold used by the frozen evaluation package is `0.50`. Severity is a deterministic routing/presentation mapping, not an empirical accuracy claim.
+
+### Evaluation harness and measured comparison
+
+The canonical Task 3.9 package evaluates all three models under the same eight scenarios, feature package, calibration/evaluation split, decision policy, label policy, and seed conditions.
+
+Logical identity:
+
+- evaluation unit: `(scenario_id, run_id, unit_id, unit_index)`;
+- model slot: `(scenario_id, run_id, unit_id, unit_index, model_name)`.
+
+Package reconciliation:
+
+- scenarios: 8;
+- evaluation units: 240;
+- model slots/outcomes: 720;
+- successful outcomes: 600;
+- insufficient-data outcomes: 120 (40 per model, retained in status and confusion accounting);
+- failure/other outcomes: 0;
+- missing slots: 0;
+- duplicate slots: 0.
+
+Measured aggregate results at decision threshold `0.50`:
+
+| Model | Micro precision | Micro recall | Micro F1 | Micro FPR | Macro precision | Macro recall | Macro F1 | Macro FPR | Mean detection latency |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Prophet | 0.304688 | 0.487500 | 0.375000 | 0.556250 | 0.304688 | 0.487500 | 0.375000 | 0.556250 | 2.0 s |
+| Isolation Forest | 0.417323 | 0.662500 | 0.512077 | 0.462500 | 0.416146 | 0.662500 | 0.511154 | 0.462500 | 2.0 s |
+| Autoencoder | 0.419355 | 0.650000 | 0.509804 | 0.450000 | 0.414062 | 0.650000 | 0.505245 | 0.450000 | 1.0 s |
+
+These numbers are measured research results for the frozen controlled fixture. They are not production SLOs or universal model rankings.
+
+### Canonical research package
+
+The frozen Task 3.9 package contains 12 artifacts:
+
+1. `research/experiments/phase3/task_3_9/comparison_manifest.json`
+2. `research/experiments/phase3/task_3_9/prophet_experiment.json`
+3. `research/experiments/phase3/task_3_9/isolation_forest_experiment.json`
+4. `research/experiments/phase3/task_3_9/autoencoder_experiment.json`
+5. `research/results/raw/phase3/task_3_9/evaluation_outcomes.jsonl`
+6. `research/results/processed/phase3/task_3_9/model_comparison.json`
+7. `research/results/processed/phase3/task_3_9/model_comparison.csv`
+8. `research/results/processed/phase3/task_3_9/scenario_comparison.csv`
+9. `research/results/figures/phase3/task_3_9/model_quality_metrics.svg`
+10. `research/results/figures/phase3/task_3_9/detection_latency_by_scenario.svg`
+11. `research/reports/phase3/task_3_9/evaluation_report.md`
+12. `research/results/processed/phase3/task_3_9/artifact_manifest.json`
+
+The manifest declares 11 artifacts and intentionally excludes its own digest. Independent closure verification matched every declared digest and record count. The package embeds code revision `481652c2047a59e697c3008115da0faefcbbde01`, the revision from which the canonical package was regenerated. No artifact was regenerated during Task 3.12.
+
+### Publication and Phase 4 interface
+
+`AnomalySignalPublisher` publishes a validated immutable signal through the existing Kafka transport conventions to `aegis.ml.anomalies`.
+
+Publication guarantees verified by tests:
+
+- deterministic key/payload/header construction;
+- exact required initial header set;
+- run/scenario/reproducibility context preservation;
+- finite non-negative publication latency;
+- one producer call per explicit publish call;
+- typed `AnomalyPublicationError` translation with exact original cause;
+- signal immutability on producer and producer-not-started failures; and
+- logging/observability sink failure does not alter the business result or business exception.
+
+The controlled real-Kafka test publishes, consumes, reconstructs a `TelemetryEnvelope`, calls `anomaly_signal_from_envelope`, and verifies that the reconstructed `AnomalySignal` and semantic fingerprint match the original. This is the accepted Phase 4-facing interface only. No incident creation, correlation, topology traversal, or RCA logic exists in Phase 3.
+
+### Operational observability and structured failures
+
+Phase 3 records bounded, typed operational measurements for:
+
+- feature extraction;
+- model execution;
+- calibration fit/application;
+- evaluation; and
+- publication.
+
+Verified evaluation-run cardinality:
+
+- feature extraction: 16 records (8 calibration + 8 evaluation);
+- model execution: 48 records (24 calibration + 24 evaluation);
+- calibration: 601 records (1 fit + 600 successful applications);
+- evaluation: 24 authoritative records (one per scenario/model slot).
+
+Structured failure categories include feature-extraction failure, model failure, malformed output, missing window, calibration failure, evaluation failure, and publication failure. Tests verify single-record attribution, bounded/sanitized messages, complete context, exact exception identity where propagation is required, and non-misclassification of insufficient history.
+
+### Reproducibility, retry, and replay identity
+
+`AnomalyReproducibilityLineage` and the canonical SHA-256 semantic fingerprint bind the meaningful `AnomalySignal` contents, including signal/run/scenario identity, seed, reproducibility key, model identity, source-event IDs, and event-time window.
+
+Verified behavior:
+
+- equivalent JSON-restored signals produce the same fingerprint;
+- semantic mutations change the fingerprint;
+- dictionary key order does not change the fingerprint;
+- ordered evidence/source lists remain order-sensitive;
+- Unicode and strict finite canonicalization are deterministic;
+- two explicit publish attempts preserve event, key, headers, and semantic fingerprint while producing distinct transport results; and
+- quarantine replay preserves exact payload/key/original headers and semantic identity, adding one replay marker.
+
+No automatic application retry worker, exactly-once application guarantee, or generalized arbitrary replay-graph prevention is claimed.
+
+### Final regression and infrastructure evidence
+
+Task 3.12 closure results:
+
+- Phase 3 suite: 842 collected, 842 passed in 144.26 seconds;
+- non-integration suite: 1,220 passed, 37 deselected;
+- integration suite: 37 passed, 1,220 deselected in 1,231.78 seconds;
+- complete backend suite: 1,257 passed in 1,369.17 seconds;
+- Ruff lint: PASS;
+- Ruff format check: PASS (29 files already formatted);
+- Mypy application: PASS (87 source files);
+- Mypy application/tests/evaluation script: PASS (137 source files; four informational notes in `test_simulator_interfaces.py`);
+- Poetry validation: PASS with four known deprecation warnings;
+- `git diff --check`: PASS with expected LF-to-CRLF working-copy warnings;
+- frontend lint: PASS;
+- frontend type-check: PASS;
+- frontend tests: PASS;
+- frontend production build: PASS.
+
+Real infrastructure verification passed for Docker Compose validation, Kafka, PostgreSQL, Redis, Milvus, MinIO, etcd, VictoriaMetrics, and OpenSearch. All six canonical Kafka topics were healthy with one partition and replication factor one. The full integration suite verified Kafka publication, telemetry consumers, VictoriaMetrics/OpenSearch persistence and queries, quarantine/replay, readiness, pipeline observability, and all canonical scenarios.
+
+### Freeze integrity and scope boundary
+
+Phase 3 introduced no modifications under frozen production paths:
+
+- `backend/app/simulator/`;
+- `backend/app/telemetry/`;
+- `backend/app/core/`; or
+- `backend/app/db/`.
+
+Phase 3 additions are confined to the anomaly subsystem and its tests, approved model dependencies, the evaluation runner, and the canonical Phase 3 research package.
+
+Phase 3 explicitly did not implement:
+
+- incident creation or cross-service correlation;
+- topology traversal or blast-radius calculation;
+- root-cause analysis or causal ranking;
+- RAG/vector retrieval or historical knowledge ingestion;
+- LangGraph/agent reasoning;
+- risk/HITL decisions;
+- remediation or rollback execution;
+- 24–48 hour predictive-failure claims; or
+- production-scale throughput/SLO claims.
+
+### Phase 3 Definition of Done
+
+All twelve closure dimensions passed:
+
+1. versioned anomaly contract and serialization — PASS;
+2. reproducible experiment configuration — PASS;
+3. deterministic feature extraction/windowing — PASS;
+4. Prophet baseline — PASS;
+5. Isolation Forest baseline — PASS;
+6. Autoencoder baseline — PASS;
+7. common calibration and severity mapping — PASS;
+8. reproducible multi-model evaluation package — PASS;
+9. Kafka publication and Phase 4 handoff boundary — PASS;
+10. operational observability and structured failure records — PASS;
+11. semantic lineage, retry, and replay identity — PASS;
+12. regression, infrastructure, artifact, freeze, and leakage audit — PASS.
+
+Closure blocker count: 0.
+
+### Phase 3 freeze boundary
+
+Phase 3 freezes:
+
+- the versioned `AnomalySignal` contract and canonical serialization;
+- deterministic experiment/feature/window configuration;
+- Prophet, Isolation Forest, and Autoencoder baseline behavior and artifact contracts;
+- common calibration, decision, and severity semantics;
+- logical unit/slot identities and evaluation metrics;
+- the canonical Task 3.9 research package and manifest policy;
+- detached `aegis.ml.anomalies` publication;
+- the Phase 4-facing handoff contract;
+- structured operational measurements and failure categories; and
+- semantic fingerprint, explicit retry identity, and tested replay identity behavior.
+
+Future changes to these frozen semantics require explicit versioning, change control, regression evidence, and review.
+
+### Known limitations retained by design
+
+- Two historical Task 3.11 recovery stashes remain outside the working tree as recoverable snapshots.
+- Kafka/downstream behavior remains at-least-once; exactly-once application semantics are not claimed.
+- Explicit repeated publication is tested, but no automatic application retry policy is implemented.
+- The tested quarantine replay path is bounded; arbitrary recursive replay graphs are not claimed.
+- The three models are controlled research baselines, not production capacity or accuracy guarantees.
+- Phase 4 has only a validated input/handoff boundary; Phase 4 implementation has not started.
+
+### Current project baseline after Phase 3
+
+PHASE 0 — FOUNDATION
+COMPLETE — APPROVED — FROZEN
+
+PHASE 1 — DISTRIBUTED SIMULATOR
+COMPLETE — APPROVED — FROZEN
+
+PHASE 2 — TELEMETRY PIPELINE
+COMPLETE — APPROVED — FROZEN
+
+PHASE 3 — ML ANOMALY DETECTION AND SCORING
+COMPLETE — APPROVED — FROZEN
+
+The project now has a deterministic simulator, real telemetry transport and persistence, three reproducible anomaly-model baselines, common calibration/evaluation, canonical research evidence, real Kafka anomaly publication, operational failure visibility, semantic lineage, and a validated boundary for the next phase.
+
+### Immediate next action
+
+The next roadmap phase is Phase 4 — Incident Correlation and Topology-Aware Grouping.
+
+Phase 4 is not authorized by this progress record. A dedicated Phase 4 plan and explicit user authorization are required before implementation begins. Frozen Phase 0–3 contracts must not be changed without documented change control.

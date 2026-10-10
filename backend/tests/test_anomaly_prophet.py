@@ -59,11 +59,15 @@ def _build_feature_result(
 
     for i, val in enumerate(values):
         t = t0 + timedelta(seconds=i * interval_seconds)
-        observations.append(_make_observation(event_time=t, value=val, metric_name=metric_name))
+        observations.append(
+            _make_observation(event_time=t, value=val, metric_name=metric_name)
+        )
         if regressors_data:
             for reg_name, reg_vals in regressors_data.items():
                 observations.append(
-                    _make_observation(event_time=t, value=reg_vals[i], metric_name=reg_name)
+                    _make_observation(
+                        event_time=t, value=reg_vals[i], metric_name=reg_name
+                    )
                 )
 
     feature_names = [f"{metric_name}:mean"]
@@ -459,13 +463,28 @@ def test_score_series_sequential_causal_evaluation() -> None:
         assert r.status == ProphetScoreStatus.SUCCESS
 
     # Index 10 & 11 (normal points) have low scores
-    assert series_results[0].anomaly_score is not None and series_results[0].anomaly_score < 0.2
-    assert series_results[1].anomaly_score is not None and series_results[1].anomaly_score < 0.2
+    assert (
+        series_results[0].anomaly_score is not None
+        and series_results[0].anomaly_score < 0.2
+    )
+    assert (
+        series_results[1].anomaly_score is not None
+        and series_results[1].anomaly_score < 0.2
+    )
 
     # Index 12, 13, 14 (anomalies) have elevated scores significantly above baseline
-    assert series_results[2].anomaly_score is not None and series_results[2].anomaly_score > 0.7
-    assert series_results[3].anomaly_score is not None and series_results[3].anomaly_score > 0.5
-    assert series_results[4].anomaly_score is not None and series_results[4].anomaly_score > 0.5
+    assert (
+        series_results[2].anomaly_score is not None
+        and series_results[2].anomaly_score > 0.7
+    )
+    assert (
+        series_results[3].anomaly_score is not None
+        and series_results[3].anomaly_score > 0.5
+    )
+    assert (
+        series_results[4].anomaly_score is not None
+        and series_results[4].anomaly_score > 0.5
+    )
     assert series_results[2].anomaly_score > series_results[0].anomaly_score
     assert series_results[3].anomaly_score > series_results[0].anomaly_score
     assert series_results[4].anomaly_score > series_results[0].anomaly_score
@@ -477,15 +496,21 @@ def test_boundary_anomaly_scores_clamped_in_zero_one() -> None:
     baseline = ProphetBaseline(config=cfg)
 
     # Exact zero deviation -> 0.0
-    _, _, score_zero = baseline._compute_normalized_score(100.0, 100.0, 95.0, 105.0, [100.0] * 10)
+    _, _, score_zero = baseline._compute_normalized_score(
+        100.0, 100.0, 95.0, 105.0, [100.0] * 10
+    )
     assert score_zero == 0.0
 
     # Huge deviation -> approaching 1.0, strictly bounded
-    _, _, score_huge = baseline._compute_normalized_score(100000.0, 100.0, 95.0, 105.0, [100.0] * 10)
+    _, _, score_huge = baseline._compute_normalized_score(
+        100000.0, 100.0, 95.0, 105.0, [100.0] * 10
+    )
     assert 0.999 <= score_huge <= 1.0
 
 
-def test_fit_failure_returns_fit_failure_status(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_fit_failure_returns_fit_failure_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     values = [100.0 for _ in range(15)]
     feat_res = _build_feature_result(values)
 

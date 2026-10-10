@@ -29,7 +29,10 @@ from app.anomaly.calibration import (
     create_raw_comparison_record,
 )
 from app.anomaly.errors import CalibrationError, CalibrationReferenceError
-from app.anomaly.isolation_forest import IsolationForestScoreResult, IsolationForestScoreStatus
+from app.anomaly.isolation_forest import (
+    IsolationForestScoreResult,
+    IsolationForestScoreStatus,
+)
 from app.anomaly.models import (
     AnomalyEvidence,
     AnomalySignal,
@@ -162,7 +165,9 @@ def test_severity_thresholds_configuration_and_ordering() -> None:
     assert t.info_threshold == 0.20
     assert t.critical_threshold == 0.90
 
-    with pytest.raises(ValidationError, match="must be strictly ordered with non-empty DEBUG interval"):
+    with pytest.raises(
+        ValidationError, match="must be strictly ordered with non-empty DEBUG interval"
+    ):
         SeverityThresholdsConfig(
             info_threshold=0.50,
             warning_threshold=0.20,
@@ -170,7 +175,9 @@ def test_severity_thresholds_configuration_and_ordering() -> None:
             critical_threshold=0.90,
         )
 
-    with pytest.raises(ValidationError, match="must be strictly ordered with non-empty DEBUG interval"):
+    with pytest.raises(
+        ValidationError, match="must be strictly ordered with non-empty DEBUG interval"
+    ):
         SeverityThresholdsConfig(
             info_threshold=0.20,
             warning_threshold=0.50,
@@ -281,7 +288,9 @@ def test_calibration_config_required_version_empty_rejected(field_name: str) -> 
         "severity_mapping_version",
     ],
 )
-def test_calibration_config_required_version_whitespace_rejected(field_name: str) -> None:
+def test_calibration_config_required_version_whitespace_rejected(
+    field_name: str,
+) -> None:
     payload: dict[str, Any] = {
         "schema_version": "1.0",
         "calibration_method_version": "1.0.0",
@@ -442,7 +451,10 @@ def test_reference_sample_evaluation_partition_rejected() -> None:
     calibrator = CommonScoreCalibrator(config=cfg)
 
     ref_eval = _sample_reference_dataset("prophet", partition_role="evaluation")
-    with pytest.raises(CalibrationReferenceError, match="Leakage rejected: reference sample .* has partition_role 'evaluation'"):
+    with pytest.raises(
+        CalibrationReferenceError,
+        match="Leakage rejected: reference sample .* has partition_role 'evaluation'",
+    ):
         calibrator.fit_reference_data([ref_eval])
 
 
@@ -451,7 +463,10 @@ def test_reference_sample_test_partition_rejected() -> None:
     calibrator = CommonScoreCalibrator(config=cfg)
 
     ref_test = _sample_reference_dataset("prophet", partition_role="test")
-    with pytest.raises(CalibrationReferenceError, match="Leakage rejected: reference sample .* has partition_role 'test'"):
+    with pytest.raises(
+        CalibrationReferenceError,
+        match="Leakage rejected: reference sample .* has partition_role 'test'",
+    ):
         calibrator.fit_reference_data([ref_test])
 
 
@@ -494,7 +509,10 @@ def test_reference_sample_mixed_calibration_evaluation_rejected() -> None:
         created_at=t0,
     )
 
-    with pytest.raises(CalibrationReferenceError, match="Leakage rejected: reference sample .* has partition_role 'evaluation'"):
+    with pytest.raises(
+        CalibrationReferenceError,
+        match="Leakage rejected: reference sample .* has partition_role 'evaluation'",
+    ):
         calibrator.fit_reference_data([ds_mixed])
 
 
@@ -537,7 +555,10 @@ def test_reference_sample_mixed_calibration_test_rejected() -> None:
         created_at=t0,
     )
 
-    with pytest.raises(CalibrationReferenceError, match="Leakage rejected: reference sample .* has partition_role 'test'"):
+    with pytest.raises(
+        CalibrationReferenceError,
+        match="Leakage rejected: reference sample .* has partition_role 'test'",
+    ):
         calibrator.fit_reference_data([ds_mixed])
 
 
@@ -789,9 +810,17 @@ def test_fitted_calibration_serialization_round_trip() -> None:
     assert loaded_fitted.reference_id == ds.reference_id
     assert loaded_fitted.reference_version == ds.reference_version
     assert loaded_fitted.sample_count == 21
-    assert loaded_fitted.ordered_reference_sample_ids == fitted.ordered_reference_sample_ids
-    assert loaded_fitted.earliest_reference_event_time == fitted.earliest_reference_event_time
-    assert loaded_fitted.latest_reference_event_time == fitted.latest_reference_event_time
+    assert (
+        loaded_fitted.ordered_reference_sample_ids
+        == fitted.ordered_reference_sample_ids
+    )
+    assert (
+        loaded_fitted.earliest_reference_event_time
+        == fitted.earliest_reference_event_time
+    )
+    assert (
+        loaded_fitted.latest_reference_event_time == fitted.latest_reference_event_time
+    )
     assert loaded_fitted.calibration_cutoff_time == fitted.calibration_cutoff_time
     assert loaded_fitted.allowed_partition_role == "calibration"
     assert loaded_fitted.calibration_split_rule == "independent_reference_set"
@@ -829,7 +858,9 @@ def test_target_signal_leakage_in_reference_lineage_rejected() -> None:
     calibrator = CommonScoreCalibrator(config=cfg)
 
     target_signal_id = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
-    ref_ds = _sample_reference_dataset("prophet", sample_ids=[target_signal_id] + [uuid.uuid4() for _ in range(20)])
+    ref_ds = _sample_reference_dataset(
+        "prophet", sample_ids=[target_signal_id] + [uuid.uuid4() for _ in range(20)]
+    )
     calibrator.fit_reference_data([ref_ds])
 
     target_signal = _sample_signal("prophet", 0.65, signal_id=target_signal_id)
@@ -902,11 +933,15 @@ def test_boundary_values_zero_and_one() -> None:
     calibrator = CommonScoreCalibrator(config=cfg)
     calibrator.fit_reference_data([_sample_reference_dataset("prophet")])
 
-    res_0 = calibrator.calibrate_input(calibration_input_from_signal(_sample_signal("prophet", 0.0)))
+    res_0 = calibrator.calibrate_input(
+        calibration_input_from_signal(_sample_signal("prophet", 0.0))
+    )
     assert res_0.calibrated_score == 0.0
     assert res_0.severity == EventSeverity.DEBUG
 
-    res_1 = calibrator.calibrate_input(calibration_input_from_signal(_sample_signal("prophet", 1.0)))
+    res_1 = calibrator.calibrate_input(
+        calibration_input_from_signal(_sample_signal("prophet", 1.0))
+    )
     assert res_1.calibrated_score == 1.0
     assert res_1.severity == EventSeverity.CRITICAL
 
@@ -961,7 +996,10 @@ def test_immutability_of_source_signal_and_lineage_preservation() -> None:
     cal_sig = res.calibrated_signal
     assert cal_sig.tags["source_signal_id"] == str(orig_signal_id)
     assert cal_sig.tags["calibration_status"] == "calibrated"
-    assert cal_sig.threshold_or_calibration.parameters["source_baseline_normalized_score"] == orig_score
+    assert (
+        cal_sig.threshold_or_calibration.parameters["source_baseline_normalized_score"]
+        == orig_score
+    )
 
 
 def test_missing_model_calibration_returns_explicit_status() -> None:
@@ -997,10 +1035,14 @@ def test_tied_and_degenerate_reference_distribution() -> None:
     ref_degen = _sample_reference_dataset("prophet", scores=[0.50 for _ in range(10)])
     calibrator.fit_reference_data([ref_degen])
 
-    res_low = calibrator.calibrate_input(calibration_input_from_signal(_sample_signal("prophet", 0.40)))
+    res_low = calibrator.calibrate_input(
+        calibration_input_from_signal(_sample_signal("prophet", 0.40))
+    )
     assert res_low.calibrated_score == 0.0
 
-    res_high = calibrator.calibrate_input(calibration_input_from_signal(_sample_signal("prophet", 0.60)))
+    res_high = calibrator.calibrate_input(
+        calibration_input_from_signal(_sample_signal("prophet", 0.60))
+    )
     assert res_high.calibrated_score == 1.0
 
 
@@ -1079,7 +1121,9 @@ def test_non_success_model_result_conversion_rejected() -> None:
         target_timestamp=datetime.now(timezone.utc),
         error_message="Stan failed",
     )
-    with pytest.raises(CalibrationError, match="Cannot build CalibrationInput from non-success"):
+    with pytest.raises(
+        CalibrationError, match="Cannot build CalibrationInput from non-success"
+    ):
         calibration_input_from_prophet(res_failed)
 
 

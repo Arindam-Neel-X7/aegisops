@@ -9,7 +9,14 @@ from typing import Any, Literal
 import uuid
 import warnings
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 import sklearn
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.neural_network import MLPRegressor
@@ -18,7 +25,11 @@ from app.anomaly.errors import (
     AutoencoderArtifactError,
     AutoencoderFitError,
 )
-from app.anomaly.features import FeatureExtractionResult, FeatureWindow, compute_quantile
+from app.anomaly.features import (
+    FeatureExtractionResult,
+    FeatureWindow,
+    compute_quantile,
+)
 from app.anomaly.isolation_forest import MAX_UINT32, ScalingParameters
 from app.anomaly.models import (
     SUPPORTED_ANOMALY_SCHEMA_VERSION,
@@ -49,7 +60,9 @@ class AutoencoderBaselineConfig(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    schema_version: str = Field(default=SUPPORTED_AE_CONFIG_SCHEMA_VERSION, min_length=1)
+    schema_version: str = Field(
+        default=SUPPORTED_AE_CONFIG_SCHEMA_VERSION, min_length=1
+    )
     model_name: str = Field(default="autoencoder", min_length=1)
     model_version: str = Field(default="1.0.0", min_length=1)
     framework_name: str = Field(default="scikit-learn", min_length=1)
@@ -82,7 +95,9 @@ class AutoencoderBaselineConfig(BaseModel):
     warning_threshold: float = Field(default=0.50, ge=0.0, le=1.0)
     error_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
     critical_threshold: float = Field(default=0.90, ge=0.0, le=1.0)
-    artifact_schema_version: str = Field(default=SUPPORTED_AE_ARTIFACT_SCHEMA_VERSION, min_length=1)
+    artifact_schema_version: str = Field(
+        default=SUPPORTED_AE_ARTIFACT_SCHEMA_VERSION, min_length=1
+    )
 
     @field_validator("model_name")
     @classmethod
@@ -116,7 +131,9 @@ class AutoencoderBaselineConfig(BaseModel):
     @classmethod
     def validate_feature_names(cls, v: list[str]) -> list[str]:
         if len(v) < 2:
-            raise ValueError("Autoencoder requires at least 2 feature names for bottleneck compression")
+            raise ValueError(
+                "Autoencoder requires at least 2 feature names for bottleneck compression"
+            )
         cleaned = []
         for fname in v:
             if not isinstance(fname, str) or not fname.strip():
@@ -147,9 +164,13 @@ class AutoencoderBaselineConfig(BaseModel):
             )
         for h_dim in self.hidden_layer_sizes:
             if h_dim <= 0:
-                raise ValueError(f"Hidden layer dimensions must be positive, got {h_dim}")
+                raise ValueError(
+                    f"Hidden layer dimensions must be positive, got {h_dim}"
+                )
 
-        if not (self.warning_threshold <= self.error_threshold <= self.critical_threshold):
+        if not (
+            self.warning_threshold <= self.error_threshold <= self.critical_threshold
+        ):
             raise ValueError(
                 f"Threshold hierarchy invalid: warning ({self.warning_threshold}) <= "
                 f"error ({self.error_threshold}) <= critical ({self.critical_threshold})"
@@ -162,8 +183,12 @@ class AutoencoderArtifact(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    artifact_schema_version: str = Field(default=SUPPORTED_AE_ARTIFACT_SCHEMA_VERSION, min_length=1)
-    configuration_schema_version: str = Field(default=SUPPORTED_AE_CONFIG_SCHEMA_VERSION, min_length=1)
+    artifact_schema_version: str = Field(
+        default=SUPPORTED_AE_ARTIFACT_SCHEMA_VERSION, min_length=1
+    )
+    configuration_schema_version: str = Field(
+        default=SUPPORTED_AE_CONFIG_SCHEMA_VERSION, min_length=1
+    )
     model_name: str = "autoencoder"
     model_version: str = "1.0.0"
     framework_name: str = "scikit-learn"
@@ -231,17 +256,27 @@ class AutoencoderArtifact(BaseModel):
 
         # 4. Scaling parameters validation
         if self.scaling_parameters.feature_names != self.feature_names:
-            raise ValueError("scaling_parameters feature_names mismatch with artifact feature_names")
+            raise ValueError(
+                "scaling_parameters feature_names mismatch with artifact feature_names"
+            )
         if len(self.scaling_parameters.centers) != input_dim:
-            raise ValueError("scaling_parameters centers length mismatch with input_dimension")
+            raise ValueError(
+                "scaling_parameters centers length mismatch with input_dimension"
+            )
         if len(self.scaling_parameters.scales) != input_dim:
-            raise ValueError("scaling_parameters scales length mismatch with input_dimension")
+            raise ValueError(
+                "scaling_parameters scales length mismatch with input_dimension"
+            )
         for idx, c in enumerate(self.scaling_parameters.centers):
             if not math.isfinite(c):
-                raise ValueError(f"scaling_parameters center at index {idx} is non-finite: {c}")
+                raise ValueError(
+                    f"scaling_parameters center at index {idx} is non-finite: {c}"
+                )
         for idx, s in enumerate(self.scaling_parameters.scales):
             if not math.isfinite(s) or s <= 0.0:
-                raise ValueError(f"scaling_parameters scale at index {idx} must be finite positive, got: {s}")
+                raise ValueError(
+                    f"scaling_parameters scale at index {idx} must be finite positive, got: {s}"
+                )
 
         # 5. Reconstruction and normalization parameters validation
         if self.reconstruction_error_method != "mean_squared_error":
@@ -266,17 +301,31 @@ class AutoencoderArtifact(BaseModel):
             "scale_factor" not in self.score_normalization_parameters
             or "epsilon_spread" not in self.score_normalization_parameters
         ):
-            raise ValueError("Missing required normalization parameter ('scale_factor' or 'epsilon_spread')")
+            raise ValueError(
+                "Missing required normalization parameter ('scale_factor' or 'epsilon_spread')"
+            )
         for k, v in self.score_normalization_parameters.items():
-            if not isinstance(v, (int, float)) or not math.isfinite(float(v)) or float(v) <= 0.0:
-                raise ValueError(f"Normalization parameter '{k}' must be finite positive, got {v}")
+            if (
+                not isinstance(v, (int, float))
+                or not math.isfinite(float(v))
+                or float(v) <= 0.0
+            ):
+                raise ValueError(
+                    f"Normalization parameter '{k}' must be finite positive, got {v}"
+                )
 
         # 6. Training stats and convergence validation
         if not self.training_stats.get("converged", False):
             raise ValueError("Artifact rejected: training_stats.converged is False")
         final_loss = self.training_stats.get("final_loss")
-        if final_loss is None or isinstance(final_loss, bool) or not isinstance(final_loss, (int, float)):
-            raise ValueError("Artifact rejected: training_stats.final_loss must be a numeric float")
+        if (
+            final_loss is None
+            or isinstance(final_loss, bool)
+            or not isinstance(final_loss, (int, float))
+        ):
+            raise ValueError(
+                "Artifact rejected: training_stats.final_loss must be a numeric float"
+            )
         final_loss_val = float(final_loss)
         if not math.isfinite(final_loss_val) or final_loss_val < 0.0:
             raise ValueError(
@@ -312,7 +361,9 @@ class AutoencoderArtifact(BaseModel):
                     )
                 for val in row:
                     if not math.isfinite(val):
-                        raise ValueError(f"Non-finite weight detected in coefs layer {l_idx}: {val}")
+                        raise ValueError(
+                            f"Non-finite weight detected in coefs layer {l_idx}: {val}"
+                        )
 
             b_vec = self.intercepts[l_idx]
             if len(b_vec) != out_d:
@@ -321,7 +372,9 @@ class AutoencoderArtifact(BaseModel):
                 )
             for val in b_vec:
                 if not math.isfinite(val):
-                    raise ValueError(f"Non-finite bias detected in intercepts layer {l_idx}: {val}")
+                    raise ValueError(
+                        f"Non-finite bias detected in intercepts layer {l_idx}: {val}"
+                    )
 
         return self
 
@@ -335,10 +388,14 @@ class AutoencoderArtifact(BaseModel):
         try:
             data = json.loads(json_str)
         except Exception as exc:
-            raise AutoencoderArtifactError(f"Corrupt artifact: invalid JSON: {exc}") from exc
+            raise AutoencoderArtifactError(
+                f"Corrupt artifact: invalid JSON: {exc}"
+            ) from exc
 
         if not isinstance(data, dict):
-            raise AutoencoderArtifactError("Corrupt artifact: root must be a JSON object")
+            raise AutoencoderArtifactError(
+                "Corrupt artifact: root must be a JSON object"
+            )
 
         schema_ver = data.get("artifact_schema_version")
         if schema_ver != SUPPORTED_AE_ARTIFACT_SCHEMA_VERSION:
@@ -349,7 +406,9 @@ class AutoencoderArtifact(BaseModel):
         try:
             return cls.model_validate(data)
         except Exception as exc:
-            raise AutoencoderArtifactError(f"Artifact contract validation failed: {exc}") from exc
+            raise AutoencoderArtifactError(
+                f"Artifact contract validation failed: {exc}"
+            ) from exc
 
     def save(self, file_path: str | Path) -> None:
         """Save artifact to a file path."""
@@ -362,11 +421,15 @@ class AutoencoderArtifact(BaseModel):
         """Load artifact from a file path."""
         p = Path(file_path)
         if not p.exists():
-            raise AutoencoderArtifactError(f"Missing artifact file at path: {file_path}")
+            raise AutoencoderArtifactError(
+                f"Missing artifact file at path: {file_path}"
+            )
         try:
             content = p.read_text(encoding="utf-8")
         except Exception as exc:
-            raise AutoencoderArtifactError(f"Failed to read artifact file: {exc}") from exc
+            raise AutoencoderArtifactError(
+                f"Failed to read artifact file: {exc}"
+            ) from exc
         return cls.from_json(content)
 
 
@@ -417,7 +480,9 @@ class AutoencoderBaseline:
             if method == "standard":
                 mean_val = sum(col_vals) / num_rows
                 if num_rows > 1:
-                    var_val = sum((v - mean_val) ** 2 for v in col_vals) / (num_rows - 1)
+                    var_val = sum((v - mean_val) ** 2 for v in col_vals) / (
+                        num_rows - 1
+                    )
                     std_val = math.sqrt(var_val)
                 else:
                     std_val = 0.0
@@ -494,7 +559,9 @@ class AutoencoderBaseline:
             X_train.append(row)
 
         # 2. Build target row X_target
-        X_target_row = [target_window.values[fname] for fname in self.config.feature_names]
+        X_target_row = [
+            target_window.values[fname] for fname in self.config.feature_names
+        ]
 
         # 3. Fit scaler only on training data
         scaler = self._fit_scaler(X_train)
@@ -502,7 +569,8 @@ class AutoencoderBaseline:
         X_target_scaled = self._transform([X_target_row], scaler)
 
         raw_vector = {
-            fname: X_target_row[idx] for idx, fname in enumerate(self.config.feature_names)
+            fname: X_target_row[idx]
+            for idx, fname in enumerate(self.config.feature_names)
         }
         scaled_vector = {
             fname: X_target_scaled[0][idx]
@@ -511,7 +579,9 @@ class AutoencoderBaseline:
 
         # 4. Check for degenerate constant training series matching target
         is_constant_training = all(row == X_train[0] for row in X_train)
-        is_target_matching_constant = is_constant_training and (X_target_row == X_train[0])
+        is_target_matching_constant = is_constant_training and (
+            X_target_row == X_train[0]
+        )
 
         # 5. Fit Autoencoder (MLPRegressor)
         try:
@@ -537,17 +607,23 @@ class AutoencoderBaseline:
             )
             actual_iterations = int(mlp.n_iter_)
             final_loss = float(mlp.loss_)
-            converged = (actual_iterations < self.config.max_iter) and not has_convergence_warning
+            converged = (
+                actual_iterations < self.config.max_iter
+            ) and not has_convergence_warning
 
             if not math.isfinite(final_loss):
-                raise AutoencoderFitError(f"Autoencoder training produced non-finite loss: {final_loss}")
+                raise AutoencoderFitError(
+                    f"Autoencoder training produced non-finite loss: {final_loss}"
+                )
 
             # Reconstruct target
             pred_target_scaled = mlp.predict(X_target_scaled)
             reconstructed_row = [float(v) for v in pred_target_scaled[0]]
 
             if not all(math.isfinite(v) for v in reconstructed_row):
-                raise AutoencoderFitError("Autoencoder predicted non-finite reconstructed values")
+                raise AutoencoderFitError(
+                    "Autoencoder predicted non-finite reconstructed values"
+                )
 
             reconstructed_vector = {
                 fname: reconstructed_row[idx]
@@ -559,7 +635,7 @@ class AutoencoderBaseline:
             total_se = 0.0
             for idx, fname in enumerate(self.config.feature_names):
                 diff = X_target_scaled[0][idx] - reconstructed_row[idx]
-                se = diff ** 2
+                se = diff**2
                 per_feature_errors[fname] = se
                 total_se += se
 
@@ -571,9 +647,10 @@ class AutoencoderBaseline:
             for r_idx in range(len(X_train_scaled)):
                 t_row = X_train_scaled[r_idx]
                 p_row = train_preds_scaled[r_idx]
-                mse = sum((t_row[c] - p_row[c]) ** 2 for c in range(len(self.config.feature_names))) / len(
-                    self.config.feature_names
-                )
+                mse = sum(
+                    (t_row[c] - p_row[c]) ** 2
+                    for c in range(len(self.config.feature_names))
+                ) / len(self.config.feature_names)
                 train_mses.append(mse)
 
             s_min = min(train_mses)
@@ -601,10 +678,14 @@ class AutoencoderBaseline:
                     self.config.score_normalization_parameters.get("scale_factor", 3.0)
                 )
                 epsilon_spread = float(
-                    self.config.score_normalization_parameters.get("epsilon_spread", 1e-4)
+                    self.config.score_normalization_parameters.get(
+                        "epsilon_spread", 1e-4
+                    )
                 )
                 scale = max(s_std * scale_factor, epsilon_spread)
-                anomaly_score = min(1.0, 0.30 + 0.70 * (1.0 - math.exp(-excess / scale)))
+                anomaly_score = min(
+                    1.0, 0.30 + 0.70 * (1.0 - math.exp(-excess / scale))
+                )
 
             anomaly_score = max(0.0, min(1.0, float(anomaly_score)))
 
@@ -663,7 +744,9 @@ class AutoencoderBaseline:
                 error_message="FeatureExtractionResult contains no windows",
             )
 
-        target_idx = (len(windows) - 1) if target_window_index is None else target_window_index
+        target_idx = (
+            (len(windows) - 1) if target_window_index is None else target_window_index
+        )
         if target_idx < 0 or target_idx >= len(windows):
             return AutoencoderScoreResult(
                 status=AutoencoderScoreStatus.INVALID_INPUT,
@@ -891,9 +974,7 @@ class AutoencoderBaseline:
         if not windows:
             return []
 
-        start = (
-            self.config.min_training_windows if start_index is None else start_index
-        )
+        start = self.config.min_training_windows if start_index is None else start_index
         if start < 0:
             start = 0
 
@@ -913,7 +994,9 @@ class AutoencoderBaseline:
     ) -> AutoencoderArtifact:
         """Fit model and export self-contained AutoencoderArtifact."""
         windows = feature_result.windows
-        target_idx = (len(windows) - 1) if target_window_index is None else target_window_index
+        target_idx = (
+            (len(windows) - 1) if target_window_index is None else target_window_index
+        )
         target_window = windows[target_idx]
 
         history_windows = [

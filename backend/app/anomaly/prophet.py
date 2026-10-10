@@ -8,7 +8,14 @@ from typing import Any, Literal
 import uuid
 
 import pandas as pd
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 # Suppress verbose prophet / cmdstanpy output during fitting
 logging.getLogger("cmdstanpy").setLevel(logging.WARNING)
@@ -47,7 +54,9 @@ class ProphetBaselineConfig(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    schema_version: str = Field(default=SUPPORTED_PROPHET_CONFIG_SCHEMA_VERSION, min_length=1)
+    schema_version: str = Field(
+        default=SUPPORTED_PROPHET_CONFIG_SCHEMA_VERSION, min_length=1
+    )
     model_name: str = Field(default="prophet", min_length=1)
     model_version: str = Field(default="1.0.0", min_length=1)
     target_feature: str = Field(min_length=1)
@@ -64,16 +73,26 @@ class ProphetBaselineConfig(BaseModel):
     daily_seasonality: bool = False
     uncertainty_samples: int = Field(default=1000, ge=0)
     seed: int = Field(default=42, ge=0, le=MAX_UINT64)
-    score_normalization_method: str = Field(default="residual_interval_ratio_sigmoid", min_length=1)
+    score_normalization_method: str = Field(
+        default="residual_interval_ratio_sigmoid", min_length=1
+    )
     score_normalization_version: str = Field(default="1.0.0", min_length=1)
     score_normalization_parameters: dict[str, Any] = Field(
-        default_factory=lambda: {"scale_factor": 3.0, "floor": 0.0, "cap": 1.0, "epsilon": 1e-4}
+        default_factory=lambda: {
+            "scale_factor": 3.0,
+            "floor": 0.0,
+            "cap": 1.0,
+            "epsilon": 1e-4,
+        }
     )
     warning_threshold: float = Field(default=0.50, ge=0.0, le=1.0)
     error_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
     critical_threshold: float = Field(default=0.90, ge=0.0, le=1.0)
     preprocessing_assumptions: dict[str, Any] = Field(
-        default_factory=lambda: {"time_unit": "seconds", "imputation": "none_or_explicit"}
+        default_factory=lambda: {
+            "time_unit": "seconds",
+            "imputation": "none_or_explicit",
+        }
     )
 
     @field_validator("model_name")
@@ -99,7 +118,9 @@ class ProphetBaselineConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_threshold_hierarchy(self) -> ProphetBaselineConfig:
-        if not (self.warning_threshold <= self.error_threshold <= self.critical_threshold):
+        if not (
+            self.warning_threshold <= self.error_threshold <= self.critical_threshold
+        ):
             raise ValueError(
                 f"Threshold hierarchy invalid: warning ({self.warning_threshold}) <= "
                 f"error ({self.error_threshold}) <= critical ({self.critical_threshold})"
@@ -149,7 +170,9 @@ class ProphetBaseline:
         # Build training records with timezone-naive UTC timestamps for Prophet compatibility
         train_rows: list[dict[str, Any]] = []
         for w in history_windows:
-            ts_naive = w.observation_timestamp.astimezone(timezone.utc).replace(tzinfo=None)
+            ts_naive = w.observation_timestamp.astimezone(timezone.utc).replace(
+                tzinfo=None
+            )
             row: dict[str, Any] = {
                 "ds": ts_naive,
                 "y": float(w.values[self.config.target_feature]),
@@ -165,9 +188,9 @@ class ProphetBaseline:
         df_train = pd.DataFrame(train_rows)
 
         # Build future record
-        target_ts_naive = target_window.observation_timestamp.astimezone(timezone.utc).replace(
-            tzinfo=None
-        )
+        target_ts_naive = target_window.observation_timestamp.astimezone(
+            timezone.utc
+        ).replace(tzinfo=None)
         future_row: dict[str, Any] = {
             "ds": target_ts_naive,
         }
@@ -213,7 +236,11 @@ class ProphetBaseline:
                 else yhat
             )
 
-            if not (math.isfinite(yhat) and math.isfinite(yhat_lower) and math.isfinite(yhat_upper)):
+            if not (
+                math.isfinite(yhat)
+                and math.isfinite(yhat_lower)
+                and math.isfinite(yhat_upper)
+            ):
                 raise ProphetFitError(
                     f"Prophet predicted non-finite outputs: yhat={yhat}, "
                     f"lower={yhat_lower}, upper={yhat_upper}"
@@ -244,14 +271,18 @@ class ProphetBaseline:
         # Compute historical dispersion
         if len(history_values) > 1:
             avg = sum(history_values) / len(history_values)
-            variance = sum((v - avg) ** 2 for v in history_values) / (len(history_values) - 1)
+            variance = sum((v - avg) ** 2 for v in history_values) / (
+                len(history_values) - 1
+            )
             hist_std = math.sqrt(variance)
         else:
             hist_std = 0.0
 
         band = max(yhat_upper - yhat, yhat - yhat_lower, 0.0)
         epsilon = float(self.config.score_normalization_parameters.get("epsilon", 1e-4))
-        scale_factor = float(self.config.score_normalization_parameters.get("scale_factor", 3.0))
+        scale_factor = float(
+            self.config.score_normalization_parameters.get("scale_factor", 3.0)
+        )
 
         # Effective scale combines forecast uncertainty band and historical dispersion
         scale = max(band, hist_std, 0.01 * max(abs(yhat), 1.0), epsilon)
@@ -287,7 +318,9 @@ class ProphetBaseline:
                 error_message="FeatureExtractionResult contains no windows",
             )
 
-        target_idx = (len(windows) - 1) if target_window_index is None else target_window_index
+        target_idx = (
+            (len(windows) - 1) if target_window_index is None else target_window_index
+        )
         if target_idx < 0 or target_idx >= len(windows):
             return ProphetScoreResult(
                 status=ProphetScoreStatus.INVALID_INPUT,
@@ -339,7 +372,8 @@ class ProphetBaseline:
                 self.config.target_feature in w.values
                 and self.config.target_feature not in w.missing_features
                 and all(
-                    reg in w.values and reg not in w.missing_features for reg in self.config.regressors
+                    reg in w.values and reg not in w.missing_features
+                    for reg in self.config.regressors
                 )
             ):
                 history_windows.append(w)
@@ -359,7 +393,9 @@ class ProphetBaseline:
 
         # Fit and forecast
         try:
-            yhat, yhat_lower, yhat_upper = self._fit_and_predict(history_windows, target_window)
+            yhat, yhat_lower, yhat_upper = self._fit_and_predict(
+                history_windows, target_window
+            )
         except Exception as exc:
             return ProphetScoreResult(
                 status=ProphetScoreStatus.FIT_FAILURE,
@@ -466,7 +502,9 @@ class ProphetBaseline:
 
         results: list[ProphetScoreResult] = []
         for idx in range(start, len(windows)):
-            score_res = self.score_target_window(feature_result, target_window_index=idx)
+            score_res = self.score_target_window(
+                feature_result, target_window_index=idx
+            )
             results.append(score_res)
 
         return results
@@ -479,4 +517,6 @@ def run_prophet_baseline(
 ) -> ProphetScoreResult:
     """Convenience functional interface for executing Prophet baseline scoring."""
     baseline = ProphetBaseline(config=config)
-    return baseline.score_target_window(feature_result, target_window_index=target_window_index)
+    return baseline.score_target_window(
+        feature_result, target_window_index=target_window_index
+    )

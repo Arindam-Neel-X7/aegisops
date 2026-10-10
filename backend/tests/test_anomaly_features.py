@@ -65,7 +65,8 @@ def _sample_feature_config(
 ) -> FeatureWindowConfig:
     return FeatureWindowConfig(
         feature_config_id="feat-cfg-v1",
-        feature_names=features or ["http_request_duration_ms:mean", "http_requests_total:sum"],
+        feature_names=features
+        or ["http_request_duration_ms:mean", "http_requests_total:sum"],
         window_size_seconds=window_size,
         step_size_seconds=step_size,
         aggregation_methods=["mean", "sum", "p95"],
@@ -199,7 +200,9 @@ def test_deterministic_feature_extraction_minimal_and_full() -> None:
     cfg = _sample_feature_config(window_size=10.0, step_size=10.0)
 
     # 1. Minimal: 1 observation
-    obs1 = _sample_raw_observation(event_time=t0, metric_name="http_request_duration_ms", value=50.0)
+    obs1 = _sample_raw_observation(
+        event_time=t0, metric_name="http_request_duration_ms", value=50.0
+    )
     extractor = DeterministicFeatureExtractor(config=cfg)
     res_min = extractor.extract_from_observations([obs1])
 
@@ -305,7 +308,11 @@ def test_out_of_order_and_late_input_produces_identical_output() -> None:
 
 def test_stable_tie_breaking_for_equal_timestamps() -> None:
     t0 = datetime(2026, 10, 1, 12, 0, 0, tzinfo=timezone.utc)
-    cfg = _sample_feature_config(window_size=10.0, step_size=10.0, features=["http_request_duration_ms:first", "http_request_duration_ms:last"])
+    cfg = _sample_feature_config(
+        window_size=10.0,
+        step_size=10.0,
+        features=["http_request_duration_ms:first", "http_request_duration_ms:last"],
+    )
 
     # Multiple events at the exact same millisecond with deterministic UUIDs
     id_a = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -321,15 +328,21 @@ def test_stable_tie_breaking_for_equal_timestamps() -> None:
     res1 = extractor.extract_from_observations([obs_b, obs_c, obs_a])
     res2 = extractor.extract_from_observations([obs_c, obs_a, obs_b])
 
-    assert res1.windows[0].values["http_request_duration_ms:first"] == 10.0  # id_a is first alphabetically
-    assert res1.windows[0].values["http_request_duration_ms:last"] == 30.0   # id_c is last alphabetically
+    assert (
+        res1.windows[0].values["http_request_duration_ms:first"] == 10.0
+    )  # id_a is first alphabetically
+    assert (
+        res1.windows[0].values["http_request_duration_ms:last"] == 30.0
+    )  # id_c is last alphabetically
     assert res1.windows[0].source_event_ids == [id_a, id_b, id_c]
     assert res1.windows[0].values == res2.windows[0].values
 
 
 def test_duplicate_events_discarded() -> None:
     t0 = datetime(2026, 10, 1, 12, 0, 0, tzinfo=timezone.utc)
-    cfg = _sample_feature_config(window_size=10.0, step_size=10.0, features=["http_request_duration_ms:count"])
+    cfg = _sample_feature_config(
+        window_size=10.0, step_size=10.0, features=["http_request_duration_ms:count"]
+    )
 
     dup_id = uuid.UUID("00000000-0000-0000-0000-000000000099")
     obs1 = _sample_raw_observation(event_time=t0, value=100.0, event_id=dup_id)
@@ -344,11 +357,15 @@ def test_duplicate_events_discarded() -> None:
 
 def test_window_boundary_inclusion() -> None:
     t0 = datetime(2026, 10, 1, 12, 0, 0, tzinfo=timezone.utc)
-    cfg = _sample_feature_config(window_size=10.0, step_size=10.0, features=["http_request_duration_ms:count"])
+    cfg = _sample_feature_config(
+        window_size=10.0, step_size=10.0, features=["http_request_duration_ms:count"]
+    )
 
     # Observation exactly at start (t0) and exactly at boundary (t0 + 10s)
     obs_start = _sample_raw_observation(event_time=t0, event_id=uuid.UUID(int=1))
-    obs_boundary = _sample_raw_observation(event_time=t0 + timedelta(seconds=10), event_id=uuid.UUID(int=2))
+    obs_boundary = _sample_raw_observation(
+        event_time=t0 + timedelta(seconds=10), event_id=uuid.UUID(int=2)
+    )
 
     extractor = DeterministicFeatureExtractor(config=cfg)
     res = extractor.extract_from_observations([obs_start, obs_boundary])
@@ -371,7 +388,9 @@ def test_warmup_windows_marking() -> None:
     )
 
     obs = [
-        _sample_raw_observation(event_time=t0 + timedelta(seconds=i * 5), event_id=uuid.UUID(int=i + 1))
+        _sample_raw_observation(
+            event_time=t0 + timedelta(seconds=i * 5), event_id=uuid.UUID(int=i + 1)
+        )
         for i in range(4)
     ]
 
@@ -400,8 +419,12 @@ def test_missing_data_forward_fill_imputation() -> None:
     )
 
     # Window 0 has data at t0, Window 1 has NO data (gap from t0+10 to t0+20), Window 2 has data at t0+20
-    obs0 = _sample_raw_observation(event_time=t0, value=150.0, event_id=uuid.UUID(int=1))
-    obs2 = _sample_raw_observation(event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2))
+    obs0 = _sample_raw_observation(
+        event_time=t0, value=150.0, event_id=uuid.UUID(int=1)
+    )
+    obs2 = _sample_raw_observation(
+        event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2)
+    )
 
     extractor = DeterministicFeatureExtractor(config=cfg)
     res = extractor.extract_from_observations([obs0, obs2])
@@ -434,8 +457,12 @@ def test_missing_data_zero_fill_imputation() -> None:
         imputation="zero_fill",
     )
 
-    obs0 = _sample_raw_observation(event_time=t0, value=150.0, event_id=uuid.UUID(int=1))
-    obs2 = _sample_raw_observation(event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2))
+    obs0 = _sample_raw_observation(
+        event_time=t0, value=150.0, event_id=uuid.UUID(int=1)
+    )
+    obs2 = _sample_raw_observation(
+        event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2)
+    )
 
     extractor = DeterministicFeatureExtractor(config=cfg)
     res = extractor.extract_from_observations([obs0, obs2])
@@ -467,7 +494,9 @@ def test_invalid_extractor_configuration() -> None:
         DeterministicFeatureExtractor(config=cfg, min_samples_per_window=-1)
 
     with pytest.raises(InvalidFeatureInputError, match="window_timestamp_alignment"):
-        DeterministicFeatureExtractor(config=cfg, window_timestamp_alignment="invalid_alignment")
+        DeterministicFeatureExtractor(
+            config=cfg, window_timestamp_alignment="invalid_alignment"
+        )
 
 
 def test_model_family_comparability_exports() -> None:
@@ -501,7 +530,9 @@ def test_model_family_comparability_exports() -> None:
     result = extractor.extract_from_observations(obs)
 
     # 1. Prophet series export
-    prophet_records = result.to_prophet_series(feature_name="http_request_duration_ms:mean")
+    prophet_records = result.to_prophet_series(
+        feature_name="http_request_duration_ms:mean"
+    )
     assert len(prophet_records) == 5
     for idx, row in enumerate(prophet_records):
         assert "ds" in row
@@ -518,7 +549,7 @@ def test_model_family_comparability_exports() -> None:
     assert len(if_matrix[0]) == 2
     for idx, mat_row in enumerate(if_matrix):
         assert mat_row[0] == 100.0 + idx * 10  # http_request_duration_ms:mean
-        assert mat_row[1] == float(idx + 1)     # http_requests_total:sum
+        assert mat_row[1] == float(idx + 1)  # http_requests_total:sum
 
     # 3. Autoencoder matrix export (identical 2D tabular representation)
     ae_matrix, ae_windows = result.to_autoencoder_matrix()
@@ -624,7 +655,9 @@ def test_conversion_from_metric_samples() -> None:
         scenario_id="latency-spike",
     )
 
-    cfg = _sample_feature_config(window_size=10.0, step_size=10.0, features=["http_request_duration_ms:mean"])
+    cfg = _sample_feature_config(
+        window_size=10.0, step_size=10.0, features=["http_request_duration_ms:mean"]
+    )
     res = extract_features([sample1, sample2], config=cfg)
 
     assert res.total_windows == 1
@@ -652,7 +685,9 @@ def test_conversion_from_telemetry_events() -> None:
         seed=99,
     )
 
-    cfg = _sample_feature_config(window_size=10.0, step_size=10.0, features=["http_request_duration_ms:mean"])
+    cfg = _sample_feature_config(
+        window_size=10.0, step_size=10.0, features=["http_request_duration_ms:mean"]
+    )
     res = extract_features([ev], config=cfg, context=ctx)
 
     assert res.run_id == uuid.UUID(int=7)
@@ -662,12 +697,20 @@ def test_conversion_from_telemetry_events() -> None:
 
 def test_window_timestamp_alignment_options() -> None:
     t0 = datetime(2026, 10, 1, 12, 0, 0, tzinfo=timezone.utc)
-    cfg = _sample_feature_config(window_size=10.0, step_size=10.0, features=["http_request_duration_ms:mean"])
+    cfg = _sample_feature_config(
+        window_size=10.0, step_size=10.0, features=["http_request_duration_ms:mean"]
+    )
     obs = [_sample_raw_observation(event_time=t0, value=100.0)]
 
-    extractor_end = DeterministicFeatureExtractor(config=cfg, window_timestamp_alignment="end")
-    extractor_start = DeterministicFeatureExtractor(config=cfg, window_timestamp_alignment="start")
-    extractor_center = DeterministicFeatureExtractor(config=cfg, window_timestamp_alignment="center")
+    extractor_end = DeterministicFeatureExtractor(
+        config=cfg, window_timestamp_alignment="end"
+    )
+    extractor_start = DeterministicFeatureExtractor(
+        config=cfg, window_timestamp_alignment="start"
+    )
+    extractor_center = DeterministicFeatureExtractor(
+        config=cfg, window_timestamp_alignment="center"
+    )
 
     res_end = extractor_end.extract_from_observations(obs)
     res_start = extractor_start.extract_from_observations(obs)
@@ -680,12 +723,20 @@ def test_window_timestamp_alignment_options() -> None:
 
 def test_service_filtering() -> None:
     t0 = datetime(2026, 10, 1, 12, 0, 0, tzinfo=timezone.utc)
-    cfg = _sample_feature_config(window_size=10.0, step_size=10.0, features=["http_request_duration_ms:mean"])
+    cfg = _sample_feature_config(
+        window_size=10.0, step_size=10.0, features=["http_request_duration_ms:mean"]
+    )
 
-    obs_order = _sample_raw_observation(event_time=t0, service="order-service", value=100.0, event_id=uuid.UUID(int=1))
-    obs_payment = _sample_raw_observation(event_time=t0, service="payment-service", value=500.0, event_id=uuid.UUID(int=2))
+    obs_order = _sample_raw_observation(
+        event_time=t0, service="order-service", value=100.0, event_id=uuid.UUID(int=1)
+    )
+    obs_payment = _sample_raw_observation(
+        event_time=t0, service="payment-service", value=500.0, event_id=uuid.UUID(int=2)
+    )
 
-    extractor = DeterministicFeatureExtractor(config=cfg, target_service="order-service")
+    extractor = DeterministicFeatureExtractor(
+        config=cfg, target_service="order-service"
+    )
     res = extractor.extract_from_observations([obs_order, obs_payment])
 
     assert res.service == "order-service"
@@ -703,8 +754,12 @@ def test_imputation_none_behavior() -> None:
         imputation="none",
     )
 
-    obs0 = _sample_raw_observation(event_time=t0, value=150.0, event_id=uuid.UUID(int=1))
-    obs2 = _sample_raw_observation(event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2))
+    obs0 = _sample_raw_observation(
+        event_time=t0, value=150.0, event_id=uuid.UUID(int=1)
+    )
+    obs2 = _sample_raw_observation(
+        event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2)
+    )
 
     extractor = DeterministicFeatureExtractor(config=cfg)
     res = extractor.extract_from_observations([obs0, obs2])
@@ -740,9 +795,13 @@ def test_measured_zero_differs_from_missing_value() -> None:
     )
 
     # Window 0 has a genuine measured value of 0.0 (e.g. 0 latency or 0 errors)
-    obs_zero = _sample_raw_observation(event_time=t0, value=0.0, event_id=uuid.UUID(int=1))
+    obs_zero = _sample_raw_observation(
+        event_time=t0, value=0.0, event_id=uuid.UUID(int=1)
+    )
     # Window 2 has a measured value of 50.0; Window 1 has NO observations (missing)
-    obs_val = _sample_raw_observation(event_time=t0 + timedelta(seconds=20), value=50.0, event_id=uuid.UUID(int=2))
+    obs_val = _sample_raw_observation(
+        event_time=t0 + timedelta(seconds=20), value=50.0, event_id=uuid.UUID(int=2)
+    )
 
     extractor = DeterministicFeatureExtractor(config=cfg)
     res = extractor.extract_from_observations([obs_zero, obs_val])
@@ -782,7 +841,9 @@ def test_imputation_none_performs_no_imputation() -> None:
     )
 
     # Window 0: only duration is observed with value 0.0; requests is missing
-    obs = _sample_raw_observation(event_time=t0, metric_name="http_request_duration_ms", value=0.0)
+    obs = _sample_raw_observation(
+        event_time=t0, metric_name="http_request_duration_ms", value=0.0
+    )
 
     extractor = DeterministicFeatureExtractor(config=cfg)
     res = extractor.extract_from_observations([obs])
@@ -808,20 +869,28 @@ def test_model_export_rejects_unresolved_missingness_by_default() -> None:
     )
 
     # Window 0 has duration only; Window 1 has no observations
-    obs = _sample_raw_observation(event_time=t0, metric_name="http_request_duration_ms", value=100.0)
+    obs = _sample_raw_observation(
+        event_time=t0, metric_name="http_request_duration_ms", value=100.0
+    )
     extractor = DeterministicFeatureExtractor(config=cfg)
     res = extractor.extract_from_observations([obs])
 
     # 1. Isolation Forest matrix export rejects by default
-    with pytest.raises(InsufficientDataError, match="Cannot export numeric feature matrix"):
+    with pytest.raises(
+        InsufficientDataError, match="Cannot export numeric feature matrix"
+    ):
         res.to_isolation_forest_matrix()
 
     # 2. Autoencoder matrix export rejects by default
-    with pytest.raises(InsufficientDataError, match="Cannot export numeric feature matrix"):
+    with pytest.raises(
+        InsufficientDataError, match="Cannot export numeric feature matrix"
+    ):
         res.to_autoencoder_matrix()
 
     # 3. Autoencoder sequence export rejects by default
-    with pytest.raises(InsufficientDataError, match="Cannot export numeric feature matrix"):
+    with pytest.raises(
+        InsufficientDataError, match="Cannot export numeric feature matrix"
+    ):
         res.to_autoencoder_sequences(sequence_length=1)
 
     # 4. Prophet series export rejects by default when target feature or regressor is missing
@@ -839,8 +908,12 @@ def test_model_export_allows_incomplete_when_explicitly_requested() -> None:
     )
 
     # Window 0 has data at t0, Window 1 is empty, Window 2 has data at t0+20
-    obs0 = _sample_raw_observation(event_time=t0, value=150.0, event_id=uuid.UUID(int=1))
-    obs2 = _sample_raw_observation(event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2))
+    obs0 = _sample_raw_observation(
+        event_time=t0, value=150.0, event_id=uuid.UUID(int=1)
+    )
+    obs2 = _sample_raw_observation(
+        event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2)
+    )
 
     extractor = DeterministicFeatureExtractor(config=cfg)
     res = extractor.extract_from_observations([obs0, obs2])
@@ -855,7 +928,9 @@ def test_model_export_allows_incomplete_when_explicitly_requested() -> None:
     assert complete_windows[1].window_index == 2
 
     # 2. Prophet series with allow_incomplete=True exports explicit None for missing target
-    prophet_rows = res.to_prophet_series(feature_name="http_request_duration_ms:mean", allow_incomplete=True)
+    prophet_rows = res.to_prophet_series(
+        feature_name="http_request_duration_ms:mean", allow_incomplete=True
+    )
     assert len(prophet_rows) == 3
     assert prophet_rows[0]["y"] == 150.0
     assert prophet_rows[0]["is_missing"] is False
@@ -874,8 +949,12 @@ def test_zero_fill_explicit_imputation_preserves_contract() -> None:
         imputation="zero_fill",
     )
 
-    obs0 = _sample_raw_observation(event_time=t0, value=150.0, event_id=uuid.UUID(int=1))
-    obs2 = _sample_raw_observation(event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2))
+    obs0 = _sample_raw_observation(
+        event_time=t0, value=150.0, event_id=uuid.UUID(int=1)
+    )
+    obs2 = _sample_raw_observation(
+        event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2)
+    )
 
     extractor = DeterministicFeatureExtractor(config=cfg)
     res = extractor.extract_from_observations([obs0, obs2])
@@ -903,8 +982,12 @@ def test_forward_fill_explicit_imputation_preserves_contract() -> None:
         imputation="forward_fill",
     )
 
-    obs0 = _sample_raw_observation(event_time=t0, value=150.0, event_id=uuid.UUID(int=1))
-    obs2 = _sample_raw_observation(event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2))
+    obs0 = _sample_raw_observation(
+        event_time=t0, value=150.0, event_id=uuid.UUID(int=1)
+    )
+    obs2 = _sample_raw_observation(
+        event_time=t0 + timedelta(seconds=20), value=200.0, event_id=uuid.UUID(int=2)
+    )
 
     extractor = DeterministicFeatureExtractor(config=cfg)
     res = extractor.extract_from_observations([obs0, obs2])
@@ -922,10 +1005,11 @@ def test_forward_fill_explicit_imputation_preserves_contract() -> None:
     assert matrix[1] == [150.0]
 
 
-
 def test_model_export_errors_on_invalid_requests() -> None:
     t0 = datetime(2026, 10, 1, 12, 0, 0, tzinfo=timezone.utc)
-    cfg = _sample_feature_config(window_size=10.0, step_size=10.0, features=["http_request_duration_ms:mean"])
+    cfg = _sample_feature_config(
+        window_size=10.0, step_size=10.0, features=["http_request_duration_ms:mean"]
+    )
     obs = [_sample_raw_observation(event_time=t0, value=100.0)]
 
     extractor = DeterministicFeatureExtractor(config=cfg)
@@ -940,7 +1024,9 @@ def test_model_export_errors_on_invalid_requests() -> None:
         res.to_isolation_forest_matrix(feature_names=["non_existent_feature"])
 
     # Autoencoder sequences with invalid sequence length raises
-    with pytest.raises(FeatureExtractionError, match="sequence_length must be positive"):
+    with pytest.raises(
+        FeatureExtractionError, match="sequence_length must be positive"
+    ):
         res.to_autoencoder_sequences(sequence_length=0)
 
     # Autoencoder sequences with sequence length greater than total windows returns empty
@@ -961,4 +1047,6 @@ def test_separation_of_event_time_from_transport_time() -> None:
     # Observation window start and end MUST strictly match the historical event_time, not current wall clock
     assert res.windows[0].window_start == historical_event_time
     assert res.windows[0].window_end == historical_event_time + timedelta(seconds=10)
-    assert res.windows[0].observation_timestamp == historical_event_time + timedelta(seconds=10)
+    assert res.windows[0].observation_timestamp == historical_event_time + timedelta(
+        seconds=10
+    )
