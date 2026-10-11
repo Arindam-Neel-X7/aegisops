@@ -239,6 +239,10 @@ jobs:
 
     env:
       DATABASE_URL: postgresql+asyncpg://aegisops:aegisops@localhost:5432/aegisops
+      NEO4J_URI: bolt://localhost:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: change-this-development-password
+      NEO4J_DATABASE: neo4j
 
     defaults:
       run:
@@ -262,11 +266,11 @@ jobs:
         run: poetry install --no-interaction --no-ansi
 
       - name: Validate Compose config
-        run: docker compose --profile messaging --profile observability config
+        run: docker compose --profile messaging --profile observability --profile topology config
         working-directory: .
 
       - name: Start telemetry infrastructure
-        run: docker compose --profile messaging --profile observability up -d kafka victoriametrics opensearch
+        run: docker compose --profile messaging --profile observability --profile topology up -d kafka victoriametrics opensearch neo4j
         working-directory: .
 
       - name: Provision canonical Kafka topics
@@ -280,7 +284,7 @@ jobs:
             echo "Waiting for $service to be healthy..."
             for i in {1..30}; do
               local cid
-              cid=$(docker compose --profile messaging --profile observability ps -q "$service")
+              cid=$(docker compose --profile messaging --profile observability --profile topology ps -q "$service")
               if [ -z "$cid" ]; then
                 echo "$service container not found or exited early."
                 exit 1
@@ -302,6 +306,11 @@ jobs:
           wait_for_health kafka
           wait_for_health victoriametrics
           wait_for_health opensearch
+          wait_for_health neo4j
+        working-directory: .
+
+      - name: Provision canonical Neo4j topology
+        run: docker compose --profile topology run --rm neo4j-init
         working-directory: .
 
       - name: Run telemetry integration tests
@@ -310,11 +319,11 @@ jobs:
       - name: Telemetry diagnostics on failure
         if: failure()
         run: |
-          docker compose --profile messaging --profile observability ps
-          docker compose --profile messaging --profile observability logs --no-color --tail 50
+          docker compose --profile messaging --profile observability --profile topology ps
+          docker compose --profile messaging --profile observability --profile topology logs --no-color --tail 50
         working-directory: .
 
       - name: Tear down telemetry infrastructure
         if: always()
-        run: docker compose --profile messaging --profile observability down -v --remove-orphans
+        run: docker compose --profile messaging --profile observability --profile topology down -v --remove-orphans
         working-directory: .
