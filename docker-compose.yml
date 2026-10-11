@@ -221,6 +221,70 @@ services:
       retries: 5
       start_period: 20s
 
+  neo4j:
+    image: neo4j:5.26.30-community
+    container_name: aegisops-neo4j
+    restart: unless-stopped
+    profiles:
+      - topology
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-change-this-development-password}
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p ${NEO4J_PASSWORD:-change-this-development-password} 'RETURN 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  neo4j-init:
+    image: neo4j:5.26.30-community
+    container_name: aegisops-neo4j-init
+    profiles:
+      - topology
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    volumes:
+      - ./infra/neo4j:/seed:ro
+    environment:
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-change-this-development-password}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "Waiting for Neo4j and executing seed..."
+        MAX_ATTEMPTS=30
+        RETRY_DELAY_SECONDS=2
+        ATTEMPT=1
+        until cypher-shell -a bolt://neo4j:7687 -u "$${NEO4J_USER:-neo4j}" -p "$${NEO4J_PASSWORD:-change-this-development-password}" -f /seed/seed.cypher; do
+          echo "Seed attempt $$ATTEMPT of $$MAX_ATTEMPTS failed; retrying in $${RETRY_DELAY_SECONDS}s..."
+          if [ "$$ATTEMPT" -ge "$$MAX_ATTEMPTS" ]; then
+            echo "ERROR: Seed failed after $$ATTEMPT attempts" >&2
+            exit 1
+          fi
+          ATTEMPT=$$((ATTEMPT + 1))
+          sleep $$RETRY_DELAY_SECONDS
+        done
+        echo "Verifying seeded counts..."
+        SERVICES=$$(cypher-shell -a bolt://neo4j:7687 -u "$${NEO4J_USER:-neo4j}" -p "$${NEO4J_PASSWORD:-change-this-development-password}" --format plain "MATCH (s:Service) WHERE s.topology_id = '77bb041d-fb4c-5370-9b99-45bef0082479' RETURN count(s)" | tail -n 1 | tr -d '\r')
+        DEPENDENCIES=$$(cypher-shell -a bolt://neo4j:7687 -u "$${NEO4J_USER:-neo4j}" -p "$${NEO4J_PASSWORD:-change-this-development-password}" --format plain "MATCH ()-[r:DEPENDS_ON]->() WHERE r.topology_id = '77bb041d-fb4c-5370-9b99-45bef0082479' RETURN count(r)" | tail -n 1 | tr -d '\r')
+        echo "Seeded services count: $$SERVICES"
+        echo "Seeded dependencies count: $$DEPENDENCIES"
+        if [ "$$SERVICES" -ne 7 ]; then
+          echo "ERROR: Expected 7 services, got $$SERVICES" >&2
+          exit 1
+        fi
+        if [ "$$DEPENDENCIES" -ne 7 ]; then
+          echo "ERROR: Expected 7 dependencies, got $$DEPENDENCIES" >&2
+          exit 1
+        fi
+        echo "Neo4j seed verification passed successfully."
+
 volumes:
   pgdata:
   kafka_data:
@@ -229,3 +293,4 @@ volumes:
   milvus_data:
   victoria_data:
   opensearch_data:
+  neo4j_data:
