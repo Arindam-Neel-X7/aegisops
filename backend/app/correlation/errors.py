@@ -2,6 +2,10 @@ class CorrelationError(Exception):
     """Base exception for correlation module errors."""
 
 
+class CorrelationConfigurationError(CorrelationError):
+    """Raised when correlation configuration validation or serialization fails."""
+
+
 class IncidentContractError(CorrelationError):
     """Raised when an incident contract fails validation."""
 
