@@ -45,3 +45,24 @@ class TopologyProviderError(TopologyError):
 
 class TopologyQueryLimitError(TopologyError):
     """Raised when a topology query exceeds a configured limit."""
+
+
+# Task 4.5 Intake & Deduplication Errors
+class AnomalyIntakeError(CorrelationError):
+    """Raised when an anomaly cannot be processed at intake."""
+
+
+class AnomalyIdentityConflictError(AnomalyIntakeError):
+    """Raised when a duplicate signal ID has a conflicting fingerprint."""
+
+
+class AnomalyEvidenceLimitError(AnomalyIntakeError):
+    """Raised when anomaly evidence or source events exceed limits or contain duplicates."""
+
+
+class AnomalyDedupeCapacityError(AnomalyIntakeError):
+    """Raised when the deduplication store capacity limit is reached."""
+
+
+class AnomalyDedupeStoreError(AnomalyIntakeError):
+    """Raised when the deduplication store encounters unexpected failure."""
