@@ -133,10 +133,12 @@ from app.correlation.topology import (
     serialize_topology_snapshot,
     validate_max_hops,
 )
+from app.correlation.scoring import score_candidate_pair
 from app.correlation.topology_canonical import CanonicalTopologyProvider
 from app.correlation.topology_neo4j import Neo4jTopologyProvider
 
 __all__ = [
+    "score_candidate_pair",
     "SUPPORTED_INCIDENT_SCHEMA_VERSION",
     "MAX_UINT64",
     "MAX_ENV_SERVICE_LEN",
