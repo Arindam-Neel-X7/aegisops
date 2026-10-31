@@ -66,3 +66,20 @@ class AnomalyDedupeCapacityError(AnomalyIntakeError):
 
 class AnomalyDedupeStoreError(AnomalyIntakeError):
     """Raised when the deduplication store encounters unexpected failure."""
+
+
+# Task 4.7 Grouping Errors
+class CorrelationGroupingError(CorrelationError):
+    """Base exception for grouping errors."""
+
+
+class GroupingContractError(CorrelationGroupingError):
+    """Raised when grouping contract validation or serialization fails."""
+
+
+class GroupingInputError(CorrelationGroupingError):
+    """Raised when grouping input data is invalid or inconsistent."""
+
+
+class GroupingCapacityError(CorrelationGroupingError):
+    """Raised when grouping input or output capacity limits are exceeded."""

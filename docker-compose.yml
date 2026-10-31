@@ -189,6 +189,7 @@ services:
       - -storageDataPath=/victoria-metrics-data
       - -dedup.minScrapeInterval=1ms
       - -httpListenAddr=:8428
+      - -retentionPeriod=${VICTORIAMETRICS_RETENTION_PERIOD:-100y}
     volumes:
       - victoria_data:/victoria-metrics-data
     healthcheck:
