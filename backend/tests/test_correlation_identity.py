@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from app.correlation.errors import IncidentIdentityError, IncidentSerializationError
 from app.correlation.models import (
+    SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
     IncidentAggregate,
     IncidentHandoff,
     IncidentSignalReference,
@@ -48,6 +49,7 @@ def _base_ref(**overrides) -> IncidentSignalReference:
         "service": "order-service",
         "event_time": _UTC_NOW,
         "severity": EventSeverity.ERROR,
+        "anomaly_score": 0.85,
     }
     base.update(overrides)
     return IncidentSignalReference.model_validate(base)
@@ -94,6 +96,7 @@ def _make_aggregate(**overrides) -> IncidentAggregate:
         "status": IncidentStatus.OPEN,
         "correlation_state": CorrelationWindowState.COLLECTING,
         "severity": EventSeverity.ERROR,
+        "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
         "started_at": _UTC_NOW,
         "last_seen_at": _UTC_NOW + timedelta(seconds=60),
         "created_at": _UTC_NOW,
@@ -192,6 +195,7 @@ def test_revision_fingerprint_mutation_sensitivity() -> None:
         status=agg.status,
         correlation_state=agg.correlation_state,
         severity=EventSeverity.CRITICAL,  # changed
+        severity_policy_version=agg.severity_policy_version,
         started_at=agg.started_at,
         last_seen_at=agg.last_seen_at,
         created_at=agg.created_at,
@@ -325,7 +329,7 @@ def test_handoff_member_permutation_is_canonical() -> None:
     assert agg1 == agg2
     handoff = IncidentHandoff.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "handoff_id": derive_handoff_id(
                 incident_id=agg1.incident_id,
                 incident_revision=agg1.revision,
@@ -338,6 +342,7 @@ def test_handoff_member_permutation_is_canonical() -> None:
             "environment": agg1.environment,
             "status": IncidentStatus.OPEN,
             "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
             "primary_service": agg1.primary_service,
             "affected_services": list(agg1.affected_services),
             "signal_references": [sig_b, sig_a],
@@ -525,7 +530,7 @@ def test_deserialization_translation_failure_with_cause() -> None:
     with patch.object(
         IncidentAggregate, "model_validate_json", side_effect=sentinel
     ), pytest.raises(IncidentDeserializationError) as ei:
-        deserialize_incident_aggregate(b'{"schema_version": "1.0"}')
+        deserialize_incident_aggregate(b'{"schema_version": "1.2"}')
     assert type(ei.value) is IncidentDeserializationError
     assert ei.value.__cause__ is sentinel
     assert ei.value.__suppress_context__ is True
@@ -571,7 +576,7 @@ def test_timeline_event_serialization_cycle() -> None:
     )
     ev = IncidentTimelineEvent.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "event_id": event_id,
             "incident_id": agg.incident_id,
             "revision": 1,
@@ -590,7 +595,7 @@ def test_handoff_serialization_cycle() -> None:
     agg = _make_aggregate()
     handoff = IncidentHandoff.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "handoff_id": derive_handoff_id(
                 incident_id=agg.incident_id,
                 incident_revision=agg.revision,
@@ -603,6 +608,7 @@ def test_handoff_serialization_cycle() -> None:
             "environment": agg.environment,
             "status": IncidentStatus.OPEN,
             "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
             "primary_service": agg.primary_service,
             "affected_services": list(agg.affected_services),
             "signal_references": list(agg.signal_references),
@@ -610,3 +616,270 @@ def test_handoff_serialization_cycle() -> None:
         }
     )
     assert deserialize_incident_handoff(serialize_incident_handoff(handoff)) == handoff
+
+
+# ---------- Task 4.8-C1 focused identity tests: member anomaly score and schema 1.1 ----------
+
+
+def test_aggregate_semantic_projection_includes_member_anomaly_score() -> None:
+    ref = _base_ref(anomaly_score=0.42)
+    agg = _make_aggregate(signal_references=[ref])
+    proj = aggregate_semantic_projection(agg)
+    assert "signal_references" in proj
+    assert len(proj["signal_references"]) == 1
+    member = proj["signal_references"][0]
+    assert "anomaly_score" in member
+    assert member["anomaly_score"] == 0.42
+    assert isinstance(member["anomaly_score"], float)
+
+
+def test_revision_fingerprint_sensitive_to_only_member_anomaly_score() -> None:
+    # Aggregates differing strictly and only in anomaly_score
+    ref_low = _base_ref(
+        signal_id=uuid.UUID("44444444-4444-4444-4444-444444444444"),
+        semantic_fingerprint="0" * 63 + "1",
+        anomaly_score=0.25,
+    )
+    ref_high = _base_ref(
+        signal_id=uuid.UUID("44444444-4444-4444-4444-444444444444"),
+        semantic_fingerprint="0" * 63 + "1",
+        anomaly_score=0.75,
+    )
+    # Check that model dumps differ ONLY in anomaly_score
+    dump_low = ref_low.model_dump(mode="json")
+    dump_high = ref_high.model_dump(mode="json")
+    diff_keys = [k for k in dump_low if dump_low[k] != dump_high[k]]
+    assert diff_keys == ["anomaly_score"]
+
+    agg_low = _make_aggregate(signal_references=[ref_low])
+    agg_high = _make_aggregate(signal_references=[ref_high])
+
+    fp_low = compute_revision_fingerprint(agg_low)
+    fp_high = compute_revision_fingerprint(agg_high)
+    assert fp_low != fp_high
+
+
+def test_repeating_same_aggregate_with_scores_produces_identical_outputs() -> None:
+    ref1 = _base_ref(
+        signal_id=uuid.UUID("55555555-5555-5555-5555-555555555555"),
+        semantic_fingerprint="0" * 63 + "3",
+        anomaly_score=0.618,
+    )
+    ref2 = _base_ref(
+        signal_id=uuid.UUID("55555555-5555-5555-5555-555555555555"),
+        semantic_fingerprint="0" * 63 + "3",
+        anomaly_score=0.618,
+    )
+    agg1 = _make_aggregate(signal_references=[ref1])
+    agg2 = _make_aggregate(signal_references=[ref2])
+
+    assert aggregate_semantic_projection(agg1) == aggregate_semantic_projection(agg2)
+    assert compute_revision_fingerprint(agg1) == compute_revision_fingerprint(agg2)
+    assert serialize_incident_aggregate(agg1) == serialize_incident_aggregate(agg2)
+
+
+def test_member_permutation_preserves_canonical_order_and_fingerprint_with_scores() -> (
+    None
+):
+    ref_a = _base_ref(
+        signal_id=uuid.UUID("11111111-0000-0000-0000-000000000001"),
+        semantic_fingerprint="0" * 63 + "1",
+        anomaly_score=0.33,
+    )
+    ref_b = _base_ref(
+        signal_id=uuid.UUID("11111111-0000-0000-0000-000000000002"),
+        semantic_fingerprint="0" * 63 + "2",
+        anomaly_score=0.67,
+    )
+    agg_ab = _make_aggregate(signal_references=[ref_a, ref_b])
+    agg_ba = _make_aggregate(signal_references=[ref_b, ref_a])
+
+    assert agg_ab == agg_ba
+    assert compute_revision_fingerprint(agg_ab) == compute_revision_fingerprint(agg_ba)
+    assert serialize_incident_aggregate(agg_ab) == serialize_incident_aggregate(agg_ba)
+
+
+def test_member_score_remains_attached_to_correct_signal_id_after_sorting() -> None:
+    id_1 = uuid.UUID("11111111-0000-0000-0000-000000000001")
+    id_2 = uuid.UUID("11111111-0000-0000-0000-000000000002")
+    ref_1 = _base_ref(
+        signal_id=id_1,
+        semantic_fingerprint="0" * 63 + "1",
+        anomaly_score=0.15,
+    )
+    ref_2 = _base_ref(
+        signal_id=id_2,
+        semantic_fingerprint="0" * 63 + "2",
+        anomaly_score=0.95,
+    )
+    # Provide in reverse order [ref_2, ref_1]
+    agg = _make_aggregate(signal_references=[ref_2, ref_1])
+    # The members are canonically sorted by IncidentSignalReference canonical key
+    for member in agg.signal_references:
+        if member.signal_id == id_1:
+            assert member.anomaly_score == 0.15
+        elif member.signal_id == id_2:
+            assert member.anomaly_score == 0.95
+        else:
+            pytest.fail(f"Unexpected signal_id {member.signal_id}")
+
+
+def test_derive_incident_id_deterministic_under_schema_1_2() -> None:
+    id1 = derive_incident_id(
+        tenant_id=_TENANT,
+        environment="prod",
+        anchor_signal_fingerprint=_FP_A,
+    )
+    id2 = derive_incident_id(
+        tenant_id=_TENANT,
+        environment="prod",
+        anchor_signal_fingerprint=_FP_A,
+    )
+    assert id1 == id2
+
+
+def test_derive_incident_id_locks_schema_1_2_independent_uuidv5() -> None:
+    ns = uuid.uuid5(uuid.NAMESPACE_DNS, "aegisops.phase4.incident")
+    canonical = f"1.2|{_TENANT}|prod|{_FP_A}"
+    expected_uuidv5 = uuid.uuid5(ns, canonical)
+
+    derived = derive_incident_id(
+        tenant_id=_TENANT,
+        environment="prod",
+        anchor_signal_fingerprint=_FP_A,
+    )
+    assert derived == uuid.UUID("6b8dfa93-8a41-5715-bd6f-c23667f4cbf5")
+    assert derived == expected_uuidv5
+
+
+# ---------- Task 4.8-C2 focused identity tests: severity policy and correlation-state timeline ----------
+
+
+def test_aggregate_semantic_projection_contains_severity_policy_version_exact() -> None:
+    agg = _make_aggregate()
+    proj = aggregate_semantic_projection(agg)
+    assert "severity_policy_version" in proj
+    assert proj["severity_policy_version"] == SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION
+
+
+def test_canonical_fingerprint_matches_independent_sha256_with_policy() -> None:
+    agg = _make_aggregate()
+    proj = aggregate_semantic_projection(agg)
+    canonical = json.dumps(
+        proj,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+    expected_fingerprint = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    assert compute_revision_fingerprint(agg) == expected_fingerprint
+
+
+def test_fingerprint_digest_sensitive_to_severity_policy_in_projection() -> None:
+    agg = _make_aggregate()
+    proj1 = aggregate_semantic_projection(agg)
+    proj2 = dict(proj1)
+    proj2["severity_policy_version"] = "alternate-policy/v2"
+
+    canonical1 = json.dumps(
+        proj1,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+    canonical2 = json.dumps(
+        proj2,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+    digest1 = hashlib.sha256(canonical1.encode("utf-8")).hexdigest()
+    digest2 = hashlib.sha256(canonical2.encode("utf-8")).hexdigest()
+    assert digest1 != digest2
+
+
+def test_member_order_invariance_preserved_with_severity_policy() -> None:
+    ref_a = _base_ref(
+        signal_id=uuid.UUID("11111111-0000-0000-0000-000000000001"),
+        semantic_fingerprint="0" * 63 + "1",
+        anomaly_score=0.2,
+    )
+    ref_b = _base_ref(
+        signal_id=uuid.UUID("11111111-0000-0000-0000-000000000002"),
+        semantic_fingerprint="0" * 63 + "2",
+        anomaly_score=0.8,
+    )
+    agg1 = _make_aggregate(signal_references=[ref_a, ref_b])
+    agg2 = _make_aggregate(signal_references=[ref_b, ref_a])
+    assert compute_revision_fingerprint(agg1) == compute_revision_fingerprint(agg2)
+
+
+def test_repeated_aggregate_construction_identical_fingerprint() -> None:
+    ref = _base_ref(
+        signal_id=uuid.UUID("11111111-0000-0000-0000-000000000001"),
+        semantic_fingerprint="0" * 63 + "1",
+        anomaly_score=0.5,
+    )
+    agg1 = _make_aggregate(signal_references=[ref])
+    agg2 = _make_aggregate(signal_references=[ref])
+    assert compute_revision_fingerprint(agg1) == compute_revision_fingerprint(agg2)
+
+
+def test_derive_timeline_event_id_deterministic_for_correlation_state_changed() -> None:
+    inc_id = uuid.UUID("11111111-2222-3333-4444-555555555555")
+    fixed_time = datetime(2026, 11, 1, 12, 0, 0, tzinfo=timezone.utc)
+    id1 = derive_timeline_event_id(
+        incident_id=inc_id,
+        revision=2,
+        event_type=IncidentTimelineEventType.CORRELATION_STATE_CHANGED,
+        event_time=fixed_time,
+        source_signal_id=None,
+        revision_fingerprint=_FP_A,
+    )
+    id2 = derive_timeline_event_id(
+        incident_id=inc_id,
+        revision=2,
+        event_type=IncidentTimelineEventType.CORRELATION_STATE_CHANGED,
+        event_time=fixed_time,
+        source_signal_id=None,
+        revision_fingerprint=_FP_A,
+    )
+    assert id1 == id2
+
+
+def test_derive_timeline_event_id_differs_between_state_changed_and_finalized() -> None:
+    inc_id = uuid.UUID("11111111-2222-3333-4444-555555555555")
+    fixed_time = datetime(2026, 11, 1, 12, 0, 0, tzinfo=timezone.utc)
+    id_state = derive_timeline_event_id(
+        incident_id=inc_id,
+        revision=2,
+        event_type=IncidentTimelineEventType.CORRELATION_STATE_CHANGED,
+        event_time=fixed_time,
+        source_signal_id=None,
+        revision_fingerprint=_FP_A,
+    )
+    id_fin = derive_timeline_event_id(
+        incident_id=inc_id,
+        revision=2,
+        event_type=IncidentTimelineEventType.CORRELATION_FINALIZED,
+        event_time=fixed_time,
+        source_signal_id=None,
+        revision_fingerprint=_FP_A,
+    )
+    assert id_state != id_fin
+
+
+def test_sentinel_cause_preserved_after_fixture_reconciliation() -> None:
+    from unittest.mock import patch
+    from app.correlation.errors import IncidentDeserializationError
+    from app.correlation.models import IncidentAggregate
+
+    sentinel = ValueError("sentinel-cause-test")
+    with patch.object(
+        IncidentAggregate, "model_validate_json", side_effect=sentinel
+    ), pytest.raises(IncidentDeserializationError) as ei:
+        deserialize_incident_aggregate(b'{"schema_version": "1.2"}')
+    assert ei.value.__cause__ is sentinel

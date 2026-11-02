@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -9,6 +10,7 @@ from pydantic import ValidationError
 
 from app.correlation.models import (
     SUPPORTED_INCIDENT_SCHEMA_VERSION,
+    SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
     BlastRadiusSummary,
     CorrelationEvidence,
     CorrelationWindowState,
@@ -61,6 +63,7 @@ def _signal_ref(**overrides) -> IncidentSignalReference:
         "service": "order-service",
         "event_time": _UTC_NOW,
         "severity": EventSeverity.ERROR,
+        "anomaly_score": 0.85,
     }
     base.update(overrides)
     return IncidentSignalReference.model_validate(base)
@@ -136,6 +139,7 @@ def _make_aggregate(**overrides) -> IncidentAggregate:
         "status": IncidentStatus.OPEN,
         "correlation_state": CorrelationWindowState.COLLECTING,
         "severity": EventSeverity.ERROR,
+        "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
         "started_at": _UTC_NOW,
         "last_seen_at": _UTC_NOW + timedelta(seconds=60),
         "created_at": _UTC_NOW,
@@ -213,7 +217,7 @@ def test_valid_incident_timeline_event() -> None:
     )
     ev = IncidentTimelineEvent.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "event_id": event_id,
             "incident_id": agg.incident_id,
             "revision": 1,
@@ -238,7 +242,7 @@ def test_valid_incident_handoff() -> None:
     agg = _make_aggregate()
     handoff = IncidentHandoff.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "handoff_id": derive_handoff_id(
                 incident_id=agg.incident_id,
                 incident_revision=agg.revision,
@@ -251,6 +255,7 @@ def test_valid_incident_handoff() -> None:
             "environment": agg.environment,
             "status": IncidentStatus.OPEN,
             "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
             "primary_service": agg.primary_service,
             "affected_services": list(agg.affected_services),
             "signal_references": list(agg.signal_references),
@@ -297,7 +302,7 @@ def test_python_and_json_round_trip_timeline_event() -> None:
     )
     event = IncidentTimelineEvent.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "event_id": event_id,
             "incident_id": agg.incident_id,
             "revision": 1,
@@ -318,7 +323,7 @@ def test_python_and_json_round_trip_handoff() -> None:
     agg = _make_aggregate()
     handoff = IncidentHandoff.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "handoff_id": derive_handoff_id(
                 incident_id=agg.incident_id,
                 incident_revision=agg.revision,
@@ -331,6 +336,7 @@ def test_python_and_json_round_trip_handoff() -> None:
             "environment": agg.environment,
             "status": IncidentStatus.OPEN,
             "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
             "primary_service": agg.primary_service,
             "affected_services": list(agg.affected_services),
             "signal_references": list(agg.signal_references),
@@ -373,7 +379,7 @@ def test_frozen_handoff_mutation_rejected() -> None:
     agg = _make_aggregate()
     handoff = IncidentHandoff.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "handoff_id": derive_handoff_id(
                 incident_id=agg.incident_id,
                 incident_revision=agg.revision,
@@ -386,6 +392,7 @@ def test_frozen_handoff_mutation_rejected() -> None:
             "environment": agg.environment,
             "status": IncidentStatus.OPEN,
             "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
             "primary_service": agg.primary_service,
             "affected_services": list(agg.affected_services),
             "signal_references": list(agg.signal_references),
@@ -446,7 +453,7 @@ def test_unknown_field_rejected_timeline_event() -> None:
         revision_fingerprint=agg.revision_fingerprint,
     )
     raw = {
-        "schema_version": "1.0",
+        "schema_version": "1.2",
         "event_id": str(event_id),
         "incident_id": str(agg.incident_id),
         "revision": 1,
@@ -464,7 +471,7 @@ def test_unknown_field_rejected_handoff() -> None:
     agg = _make_aggregate()
     handoff = IncidentHandoff.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "handoff_id": derive_handoff_id(
                 incident_id=agg.incident_id,
                 incident_revision=agg.revision,
@@ -477,6 +484,7 @@ def test_unknown_field_rejected_handoff() -> None:
             "environment": agg.environment,
             "status": IncidentStatus.OPEN,
             "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
             "primary_service": agg.primary_service,
             "affected_services": list(agg.affected_services),
             "signal_references": list(agg.signal_references),
@@ -504,6 +512,7 @@ def test_naive_datetime_rejected() -> None:
                 "service": "svc",
                 "event_time": naive,
                 "severity": EventSeverity.ERROR,
+                "anomaly_score": 0.85,
             }
         )
 
@@ -520,6 +529,7 @@ def test_non_utc_datetime_rejected() -> None:
                 "service": "svc",
                 "event_time": plus5,
                 "severity": EventSeverity.ERROR,
+                "anomaly_score": 0.85,
             }
         )
 
@@ -534,6 +544,7 @@ def test_json_mode_utc_acceptance() -> None:
         "service": "svc",
         "event_time": iso_utc,
         "severity": "error",
+        "anomaly_score": 0.85,
     }
     # model_validate_json should accept the ISO string
     obj = IncidentSignalReference.model_validate_json(json.dumps(raw))
@@ -552,6 +563,7 @@ def test_python_string_not_accepted_in_model_validate() -> None:
                 "service": "svc",
                 "event_time": "2026-09-30T12:00:00+00:00",  # string, not datetime in Python mode
                 "severity": EventSeverity.ERROR,
+                "anomaly_score": 0.85,
             }
         )
 
@@ -595,7 +607,7 @@ def test_boolean_rejected_for_revision() -> None:
     with pytest.raises(ValidationError):
         IncidentTimelineEvent.model_validate(
             {
-                "schema_version": "1.0",
+                "schema_version": "1.2",
                 "event_id": uuid.uuid4(),
                 "incident_id": uuid.uuid4(),
                 "revision": True,  # bool
@@ -802,7 +814,7 @@ def test_text_boundary_timeline_summary_max_and_adjacent() -> None:
     agg = _make_aggregate()
     ok = IncidentTimelineEvent.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "event_id": uuid.uuid4(),
             "incident_id": agg.incident_id,
             "revision": 1,
@@ -815,7 +827,7 @@ def test_text_boundary_timeline_summary_max_and_adjacent() -> None:
     assert ok.summary == "x" * MAX_SUMMARY_LEN
     trimmed_summary = IncidentTimelineEvent.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "event_id": uuid.uuid4(),
             "incident_id": agg.incident_id,
             "revision": 1,
@@ -829,7 +841,7 @@ def test_text_boundary_timeline_summary_max_and_adjacent() -> None:
     with pytest.raises(ValidationError):
         IncidentTimelineEvent.model_validate(
             {
-                "schema_version": "1.0",
+                "schema_version": "1.2",
                 "event_id": uuid.uuid4(),
                 "incident_id": agg.incident_id,
                 "revision": 1,
@@ -842,7 +854,7 @@ def test_text_boundary_timeline_summary_max_and_adjacent() -> None:
     with pytest.raises(ValidationError):
         IncidentTimelineEvent.model_validate(
             {
-                "schema_version": "1.0",
+                "schema_version": "1.2",
                 "event_id": uuid.uuid4(),
                 "incident_id": agg.incident_id,
                 "revision": 1,
@@ -916,6 +928,7 @@ def test_collection_boundary_signal_references() -> None:
                 "service": "svc",
                 "event_time": _UTC_NOW,
                 "severity": EventSeverity.ERROR,
+                "anomaly_score": 0.85,
             }
         )
 
@@ -1056,7 +1069,7 @@ def test_numeric_boundary_handoff_revision() -> None:
     agg = _make_aggregate()
     ok = IncidentHandoff.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "handoff_id": derive_handoff_id(
                 incident_id=agg.incident_id,
                 incident_revision=MIN_REVISION,
@@ -1069,6 +1082,7 @@ def test_numeric_boundary_handoff_revision() -> None:
             "environment": agg.environment,
             "status": IncidentStatus.OPEN,
             "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
             "primary_service": agg.primary_service,
             "affected_services": list(agg.affected_services),
             "signal_references": list(agg.signal_references),
@@ -1078,7 +1092,7 @@ def test_numeric_boundary_handoff_revision() -> None:
     assert ok.incident_revision == MIN_REVISION
     ok2 = IncidentHandoff.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "handoff_id": derive_handoff_id(
                 incident_id=agg.incident_id,
                 incident_revision=MAX_REVISION,
@@ -1091,6 +1105,7 @@ def test_numeric_boundary_handoff_revision() -> None:
             "environment": agg.environment,
             "status": IncidentStatus.OPEN,
             "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
             "primary_service": agg.primary_service,
             "affected_services": list(agg.affected_services),
             "signal_references": list(agg.signal_references),
@@ -1101,7 +1116,7 @@ def test_numeric_boundary_handoff_revision() -> None:
     with pytest.raises(ValidationError):
         IncidentHandoff.model_validate(
             {
-                "schema_version": "1.0",
+                "schema_version": "1.2",
                 "handoff_id": uuid.uuid4(),
                 "incident_id": agg.incident_id,
                 "incident_revision": MIN_REVISION - 1,
@@ -1110,6 +1125,7 @@ def test_numeric_boundary_handoff_revision() -> None:
                 "environment": agg.environment,
                 "status": IncidentStatus.OPEN,
                 "severity": EventSeverity.ERROR,
+                "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
                 "primary_service": agg.primary_service,
                 "affected_services": list(agg.affected_services),
                 "signal_references": list(agg.signal_references),
@@ -1119,7 +1135,7 @@ def test_numeric_boundary_handoff_revision() -> None:
     with pytest.raises(ValidationError):
         IncidentHandoff.model_validate(
             {
-                "schema_version": "1.0",
+                "schema_version": "1.2",
                 "handoff_id": uuid.uuid4(),
                 "incident_id": agg.incident_id,
                 "incident_revision": MAX_REVISION + 1,
@@ -1128,6 +1144,7 @@ def test_numeric_boundary_handoff_revision() -> None:
                 "environment": agg.environment,
                 "status": IncidentStatus.OPEN,
                 "severity": EventSeverity.ERROR,
+                "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
                 "primary_service": agg.primary_service,
                 "affected_services": list(agg.affected_services),
                 "signal_references": list(agg.signal_references),
@@ -1137,7 +1154,7 @@ def test_numeric_boundary_handoff_revision() -> None:
     with pytest.raises(ValidationError):
         IncidentHandoff.model_validate(
             {
-                "schema_version": "1.0",
+                "schema_version": "1.2",
                 "handoff_id": uuid.uuid4(),
                 "incident_id": agg.incident_id,
                 "incident_revision": True,
@@ -1146,6 +1163,7 @@ def test_numeric_boundary_handoff_revision() -> None:
                 "environment": agg.environment,
                 "status": IncidentStatus.OPEN,
                 "severity": EventSeverity.ERROR,
+                "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
                 "primary_service": agg.primary_service,
                 "affected_services": list(agg.affected_services),
                 "signal_references": list(agg.signal_references),
@@ -1196,7 +1214,7 @@ def test_fingerprint_boundary_exact_edges() -> None:
     assert (
         IncidentTimelineEvent.model_validate(
             {
-                "schema_version": "1.0",
+                "schema_version": "1.2",
                 "event_id": uuid.uuid4(),
                 "incident_id": agg.incident_id,
                 "revision": 1,
@@ -1212,7 +1230,7 @@ def test_fingerprint_boundary_exact_edges() -> None:
         with pytest.raises(ValidationError):
             IncidentTimelineEvent.model_validate(
                 {
-                    "schema_version": "1.0",
+                    "schema_version": "1.2",
                     "event_id": uuid.uuid4(),
                     "incident_id": agg.incident_id,
                     "revision": 1,
@@ -1225,7 +1243,20 @@ def test_fingerprint_boundary_exact_edges() -> None:
 
 
 def _schema_version_cases() -> list[object]:
-    return ["2.0", "", "   ", "x" * 129, 123, True, None]
+    return [
+        "1.0",
+        "1.1",
+        "1.0.0",
+        "1.1.0",
+        "1.2.0",
+        "2.0",
+        "",
+        "   ",
+        "x" * 129,
+        123,
+        True,
+        None,
+    ]
 
 
 def test_schema_version_boundary_timeline_event() -> None:
@@ -1304,6 +1335,7 @@ def test_schema_version_boundary_incident_handoff() -> None:
         "environment": agg.environment,
         "status": IncidentStatus.OPEN,
         "severity": EventSeverity.ERROR,
+        "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
         "primary_service": agg.primary_service,
         "affected_services": list(agg.affected_services),
         "signal_references": list(agg.signal_references),
@@ -1391,7 +1423,7 @@ def test_snapshot_isolation_handoff_collections() -> None:
     refs = list(agg.signal_references)
     handoff = IncidentHandoff.model_validate(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.2",
             "handoff_id": derive_handoff_id(
                 incident_id=agg.incident_id,
                 incident_revision=agg.revision,
@@ -1404,6 +1436,7 @@ def test_snapshot_isolation_handoff_collections() -> None:
             "environment": agg.environment,
             "status": IncidentStatus.OPEN,
             "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
             "primary_service": agg.primary_service,
             "affected_services": affected,
             "signal_references": refs,
@@ -1431,6 +1464,7 @@ def test_empty_signal_references_rejected() -> None:
                 "status": IncidentStatus.OPEN,
                 "correlation_state": CorrelationWindowState.COLLECTING,
                 "severity": EventSeverity.ERROR,
+                "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
                 "started_at": _UTC_NOW,
                 "last_seen_at": _UTC_NOW,
                 "created_at": _UTC_NOW,
@@ -1480,6 +1514,7 @@ def test_oversized_signal_references_rejected() -> None:
                 "service": "svc",
                 "event_time": _UTC_NOW,
                 "severity": EventSeverity.ERROR,
+                "anomaly_score": 0.85,
             }
         )
         for i in range(1025)
@@ -1495,6 +1530,7 @@ def test_oversized_signal_references_rejected() -> None:
                 "status": IncidentStatus.OPEN,
                 "correlation_state": CorrelationWindowState.COLLECTING,
                 "severity": EventSeverity.ERROR,
+                "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
                 "started_at": _UTC_NOW,
                 "last_seen_at": _UTC_NOW,
                 "created_at": _UTC_NOW,
@@ -1514,7 +1550,7 @@ def test_oversized_summary_rejected() -> None:
     with pytest.raises(ValidationError):
         IncidentTimelineEvent.model_validate(
             {
-                "schema_version": "1.0",
+                "schema_version": "1.2",
                 "event_id": uuid.uuid4(),
                 "incident_id": agg.incident_id,
                 "revision": 1,
@@ -1643,3 +1679,691 @@ def test_forbidden_fields_rejected(forbidden: str) -> None:
     raw[forbidden] = "evil"
     with pytest.raises(ValidationError):
         IncidentSignalReference.model_validate(raw)
+
+
+# ---------- Task 4.8-C1 focused tests: member anomaly score and schema 1.1 ----------
+
+
+def test_supported_incident_schema_version_is_1_2() -> None:
+    assert SUPPORTED_INCIDENT_SCHEMA_VERSION == "1.2"
+
+
+@pytest.mark.parametrize("score", [0.0, 1.0])
+def test_signal_reference_anomaly_score_exact_bounds(score: float) -> None:
+    ref = _signal_ref(anomaly_score=score)
+    assert ref.anomaly_score == score
+    assert isinstance(ref.anomaly_score, float)
+
+
+def test_signal_reference_anomaly_score_interior_preserved() -> None:
+    ref = _signal_ref(anomaly_score=0.42)
+    assert ref.anomaly_score == 0.42
+    assert isinstance(ref.anomaly_score, float)
+
+
+def test_signal_reference_missing_anomaly_score_rejected() -> None:
+    payload = {
+        "signal_id": uuid.UUID("22222222-2222-2222-2222-222222222222"),
+        "semantic_fingerprint": _FP,
+        "tenant_id": _tenant_id(),
+        "environment": "prod",
+        "service": "order-service",
+        "event_time": _UTC_NOW,
+        "severity": EventSeverity.ERROR,
+    }
+    with pytest.raises(ValidationError) as exc_info:
+        IncidentSignalReference.model_validate(payload)
+    assert any(
+        "anomaly_score" in str(err.get("loc", ())) for err in exc_info.value.errors()
+    )
+
+
+@pytest.mark.parametrize("bool_val", [True, False])
+def test_signal_reference_boolean_anomaly_score_rejected(bool_val: bool) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        _signal_ref(anomaly_score=bool_val)
+    assert any(
+        "anomaly_score" in str(err.get("loc", ())) for err in exc_info.value.errors()
+    )
+
+
+@pytest.mark.parametrize("int_val", [0, 1])
+def test_signal_reference_integer_anomaly_score_rejected(int_val: int) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        _signal_ref(anomaly_score=int_val)
+    assert any(
+        "anomaly_score" in str(err.get("loc", ())) for err in exc_info.value.errors()
+    )
+
+
+@pytest.mark.parametrize("bad_val", ["0.5", "0.0", "1.0", "", None])
+def test_signal_reference_string_and_none_anomaly_score_rejected(
+    bad_val: object,
+) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        _signal_ref(anomaly_score=bad_val)
+    assert any(
+        "anomaly_score" in str(err.get("loc", ())) for err in exc_info.value.errors()
+    )
+
+
+@pytest.mark.parametrize("non_finite", [math.nan, math.inf, -math.inf])
+def test_signal_reference_non_finite_anomaly_score_rejected(non_finite: float) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        _signal_ref(anomaly_score=non_finite)
+    assert any(
+        "anomaly_score" in str(err.get("loc", ())) for err in exc_info.value.errors()
+    )
+
+
+@pytest.mark.parametrize(
+    "adjacent_val",
+    [
+        math.nextafter(0.0, -math.inf),
+        math.nextafter(1.0, math.inf),
+    ],
+)
+def test_signal_reference_adjacent_out_of_bounds_anomaly_score_rejected(
+    adjacent_val: float,
+) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        _signal_ref(anomaly_score=adjacent_val)
+    assert any(
+        "anomaly_score" in str(err.get("loc", ())) for err in exc_info.value.errors()
+    )
+
+
+def test_signal_reference_python_and_json_round_trip_preserves_anomaly_score() -> None:
+    orig = _signal_ref(anomaly_score=0.735)
+    py_copy = IncidentSignalReference.model_validate(orig.model_dump())
+    assert py_copy == orig
+    assert py_copy.anomaly_score == 0.735
+    assert isinstance(py_copy.anomaly_score, float)
+
+    json_copy = IncidentSignalReference.model_validate_json(
+        IncidentSignalReference.model_dump_json(orig)
+    )
+    assert json_copy == orig
+    assert json_copy.anomaly_score == 0.735
+    assert isinstance(json_copy.anomaly_score, float)
+
+
+def test_signal_reference_canonical_serialization_includes_anomaly_score_deterministically() -> (
+    None
+):
+    ref1 = _signal_ref(anomaly_score=0.625)
+    ref2 = _signal_ref(anomaly_score=0.625)
+    dump1 = json.dumps(
+        ref1.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
+    )
+    dump2 = json.dumps(
+        ref2.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
+    )
+    assert dump1 == dump2
+    parsed = json.loads(dump1)
+    assert parsed["anomaly_score"] == 0.625
+    assert isinstance(parsed["anomaly_score"], float)
+
+
+def test_signal_reference_frozen_mutation_of_anomaly_score_rejected() -> None:
+    ref = _signal_ref(anomaly_score=0.5)
+    with pytest.raises(ValidationError):
+        ref.anomaly_score = 0.9  # type: ignore[misc]
+
+
+@pytest.mark.parametrize(
+    "contract_type",
+    ["timeline_event", "aggregate", "handoff"],
+)
+def test_top_level_incident_contracts_independently_accept_schema_1_2(
+    contract_type: str,
+) -> None:
+    agg = _make_aggregate()
+    if contract_type == "timeline_event":
+        ev = IncidentTimelineEvent.model_validate(
+            {
+                "schema_version": "1.2",
+                "event_id": uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                "incident_id": agg.incident_id,
+                "revision": 1,
+                "event_time": _UTC_NOW,
+                "event_type": IncidentTimelineEventType.CREATED,
+                "summary": "created",
+                "revision_fingerprint": agg.revision_fingerprint,
+            }
+        )
+        assert ev.schema_version == "1.2"
+    elif contract_type == "aggregate":
+        base = agg.model_dump()
+        base["schema_version"] = "1.2"
+        verified_agg = IncidentAggregate.model_validate(base)
+        assert verified_agg.schema_version == "1.2"
+    elif contract_type == "handoff":
+        base_h = {
+            "schema_version": "1.2",
+            "handoff_id": derive_handoff_id(
+                incident_id=agg.incident_id,
+                incident_revision=agg.revision,
+                incident_revision_fingerprint=agg.revision_fingerprint,
+            ),
+            "incident_id": agg.incident_id,
+            "incident_revision": agg.revision,
+            "incident_revision_fingerprint": agg.revision_fingerprint,
+            "tenant_id": agg.tenant_id,
+            "environment": agg.environment,
+            "status": IncidentStatus.OPEN,
+            "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
+            "primary_service": agg.primary_service,
+            "affected_services": list(agg.affected_services),
+            "signal_references": list(agg.signal_references),
+            "generated_at": _UTC_NOW,
+        }
+        handoff = IncidentHandoff.model_validate(base_h)
+        assert handoff.schema_version == "1.2"
+
+
+@pytest.mark.parametrize(
+    "contract_type",
+    ["timeline_event", "aggregate", "handoff"],
+)
+def test_top_level_incident_contracts_independently_reject_old_schema_1_0(
+    contract_type: str,
+) -> None:
+    agg = _make_aggregate()
+    if contract_type == "timeline_event":
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentTimelineEvent.model_validate(
+                {
+                    "schema_version": "1.0",
+                    "event_id": uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    "incident_id": agg.incident_id,
+                    "revision": 1,
+                    "event_time": _UTC_NOW,
+                    "event_type": IncidentTimelineEventType.CREATED,
+                    "summary": "created",
+                    "revision_fingerprint": agg.revision_fingerprint,
+                }
+            )
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+    elif contract_type == "aggregate":
+        base = agg.model_dump()
+        base["schema_version"] = "1.0"
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentAggregate.model_validate(base)
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+    elif contract_type == "handoff":
+        base_h = {
+            "schema_version": "1.0",
+            "handoff_id": derive_handoff_id(
+                incident_id=agg.incident_id,
+                incident_revision=agg.revision,
+                incident_revision_fingerprint=agg.revision_fingerprint,
+            ),
+            "incident_id": agg.incident_id,
+            "incident_revision": agg.revision,
+            "incident_revision_fingerprint": agg.revision_fingerprint,
+            "tenant_id": agg.tenant_id,
+            "environment": agg.environment,
+            "status": IncidentStatus.OPEN,
+            "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
+            "primary_service": agg.primary_service,
+            "affected_services": list(agg.affected_services),
+            "signal_references": list(agg.signal_references),
+            "generated_at": _UTC_NOW,
+        }
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentHandoff.model_validate(base_h)
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+
+
+@pytest.mark.parametrize(
+    "contract_type",
+    ["timeline_event", "aggregate", "handoff"],
+)
+def test_top_level_incident_contracts_independently_reject_malformed_schema_1_1_0(
+    contract_type: str,
+) -> None:
+    agg = _make_aggregate()
+    if contract_type == "timeline_event":
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentTimelineEvent.model_validate(
+                {
+                    "schema_version": "1.1.0",
+                    "event_id": uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    "incident_id": agg.incident_id,
+                    "revision": 1,
+                    "event_time": _UTC_NOW,
+                    "event_type": IncidentTimelineEventType.CREATED,
+                    "summary": "created",
+                    "revision_fingerprint": agg.revision_fingerprint,
+                }
+            )
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+    elif contract_type == "aggregate":
+        base = agg.model_dump()
+        base["schema_version"] = "1.1.0"
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentAggregate.model_validate(base)
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+    elif contract_type == "handoff":
+        base_h = {
+            "schema_version": "1.1.0",
+            "handoff_id": derive_handoff_id(
+                incident_id=agg.incident_id,
+                incident_revision=agg.revision,
+                incident_revision_fingerprint=agg.revision_fingerprint,
+            ),
+            "incident_id": agg.incident_id,
+            "incident_revision": agg.revision,
+            "incident_revision_fingerprint": agg.revision_fingerprint,
+            "tenant_id": agg.tenant_id,
+            "environment": agg.environment,
+            "status": IncidentStatus.OPEN,
+            "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
+            "primary_service": agg.primary_service,
+            "affected_services": list(agg.affected_services),
+            "signal_references": list(agg.signal_references),
+            "generated_at": _UTC_NOW,
+        }
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentHandoff.model_validate(base_h)
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+
+
+# ---------- Task 4.8-C2 focused tests: severity policy and correlation-state timeline ----------
+
+
+def test_supported_incident_severity_policy_version_constant() -> None:
+    assert SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION == "max-member-severity/v1"
+
+
+def test_severity_policy_version_exported_from_correlation() -> None:
+    import app.correlation as corr
+
+    assert hasattr(corr, "SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION")
+    assert "SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION" in corr.__all__
+    assert corr.SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION == "max-member-severity/v1"
+
+
+@pytest.mark.parametrize(
+    "contract_type",
+    ["timeline_event", "aggregate", "handoff"],
+)
+def test_top_level_incident_contracts_independently_reject_schema_1_1(
+    contract_type: str,
+) -> None:
+    agg = _make_aggregate()
+    if contract_type == "timeline_event":
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentTimelineEvent.model_validate(
+                {
+                    "schema_version": "1.1",
+                    "event_id": uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    "incident_id": agg.incident_id,
+                    "revision": 1,
+                    "event_time": _UTC_NOW,
+                    "event_type": IncidentTimelineEventType.CREATED,
+                    "summary": "created",
+                    "revision_fingerprint": agg.revision_fingerprint,
+                }
+            )
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+    elif contract_type == "aggregate":
+        base = agg.model_dump()
+        base["schema_version"] = "1.1"
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentAggregate.model_validate(base)
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+    elif contract_type == "handoff":
+        base_h = {
+            "schema_version": "1.1",
+            "handoff_id": derive_handoff_id(
+                incident_id=agg.incident_id,
+                incident_revision=agg.revision,
+                incident_revision_fingerprint=agg.revision_fingerprint,
+            ),
+            "incident_id": agg.incident_id,
+            "incident_revision": agg.revision,
+            "incident_revision_fingerprint": agg.revision_fingerprint,
+            "tenant_id": agg.tenant_id,
+            "environment": agg.environment,
+            "status": IncidentStatus.OPEN,
+            "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
+            "primary_service": agg.primary_service,
+            "affected_services": list(agg.affected_services),
+            "signal_references": list(agg.signal_references),
+            "generated_at": _UTC_NOW,
+        }
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentHandoff.model_validate(base_h)
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+
+
+@pytest.mark.parametrize(
+    "contract_type",
+    ["timeline_event", "aggregate", "handoff"],
+)
+def test_top_level_incident_contracts_independently_reject_malformed_schema_1_2_0(
+    contract_type: str,
+) -> None:
+    agg = _make_aggregate()
+    if contract_type == "timeline_event":
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentTimelineEvent.model_validate(
+                {
+                    "schema_version": "1.2.0",
+                    "event_id": uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    "incident_id": agg.incident_id,
+                    "revision": 1,
+                    "event_time": _UTC_NOW,
+                    "event_type": IncidentTimelineEventType.CREATED,
+                    "summary": "created",
+                    "revision_fingerprint": agg.revision_fingerprint,
+                }
+            )
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+    elif contract_type == "aggregate":
+        base = agg.model_dump()
+        base["schema_version"] = "1.2.0"
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentAggregate.model_validate(base)
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+    elif contract_type == "handoff":
+        base_h = {
+            "schema_version": "1.2.0",
+            "handoff_id": derive_handoff_id(
+                incident_id=agg.incident_id,
+                incident_revision=agg.revision,
+                incident_revision_fingerprint=agg.revision_fingerprint,
+            ),
+            "incident_id": agg.incident_id,
+            "incident_revision": agg.revision,
+            "incident_revision_fingerprint": agg.revision_fingerprint,
+            "tenant_id": agg.tenant_id,
+            "environment": agg.environment,
+            "status": IncidentStatus.OPEN,
+            "severity": EventSeverity.ERROR,
+            "severity_policy_version": SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
+            "primary_service": agg.primary_service,
+            "affected_services": list(agg.affected_services),
+            "signal_references": list(agg.signal_references),
+            "generated_at": _UTC_NOW,
+        }
+        with pytest.raises(ValidationError) as exc_info:
+            IncidentHandoff.model_validate(base_h)
+        assert any(
+            "schema_version" in str(err.get("loc", ()))
+            for err in exc_info.value.errors()
+        )
+
+
+def test_aggregate_and_handoff_require_severity_policy_version() -> None:
+    agg = _make_aggregate()
+    base_agg = agg.model_dump()
+    base_agg.pop("severity_policy_version")
+    with pytest.raises(ValidationError) as exc_info_agg:
+        IncidentAggregate.model_validate(base_agg)
+    assert any(
+        "severity_policy_version" in str(err.get("loc", ()))
+        for err in exc_info_agg.value.errors()
+    )
+
+    base_h = {
+        "schema_version": SUPPORTED_INCIDENT_SCHEMA_VERSION,
+        "handoff_id": derive_handoff_id(
+            incident_id=agg.incident_id,
+            incident_revision=agg.revision,
+            incident_revision_fingerprint=agg.revision_fingerprint,
+        ),
+        "incident_id": agg.incident_id,
+        "incident_revision": agg.revision,
+        "incident_revision_fingerprint": agg.revision_fingerprint,
+        "tenant_id": agg.tenant_id,
+        "environment": agg.environment,
+        "status": IncidentStatus.OPEN,
+        "severity": EventSeverity.ERROR,
+        "primary_service": agg.primary_service,
+        "affected_services": list(agg.affected_services),
+        "signal_references": list(agg.signal_references),
+        "generated_at": _UTC_NOW,
+    }
+    with pytest.raises(ValidationError) as exc_info_h:
+        IncidentHandoff.model_validate(base_h)
+    assert any(
+        "severity_policy_version" in str(err.get("loc", ()))
+        for err in exc_info_h.value.errors()
+    )
+
+
+def test_aggregate_and_handoff_accept_exact_supported_policy() -> None:
+    agg = _make_aggregate()
+    assert agg.severity_policy_version == "max-member-severity/v1"
+    base_h = {
+        "schema_version": SUPPORTED_INCIDENT_SCHEMA_VERSION,
+        "handoff_id": derive_handoff_id(
+            incident_id=agg.incident_id,
+            incident_revision=agg.revision,
+            incident_revision_fingerprint=agg.revision_fingerprint,
+        ),
+        "incident_id": agg.incident_id,
+        "incident_revision": agg.revision,
+        "incident_revision_fingerprint": agg.revision_fingerprint,
+        "tenant_id": agg.tenant_id,
+        "environment": agg.environment,
+        "status": IncidentStatus.OPEN,
+        "severity": EventSeverity.ERROR,
+        "severity_policy_version": "max-member-severity/v1",
+        "primary_service": agg.primary_service,
+        "affected_services": list(agg.affected_services),
+        "signal_references": list(agg.signal_references),
+        "generated_at": _UTC_NOW,
+    }
+    handoff = IncidentHandoff.model_validate(base_h)
+    assert handoff.severity_policy_version == "max-member-severity/v1"
+
+
+@pytest.mark.parametrize("bad_policy", ["", "alternate-policy/v2", 1, True, None])
+def test_aggregate_and_handoff_reject_invalid_severity_policy_values(
+    bad_policy: object,
+) -> None:
+    agg = _make_aggregate()
+    base_agg = agg.model_dump()
+    base_agg["severity_policy_version"] = bad_policy
+    with pytest.raises(ValidationError) as exc_info_agg:
+        IncidentAggregate.model_validate(base_agg)
+    assert any(
+        "severity_policy_version" in str(err.get("loc", ()))
+        for err in exc_info_agg.value.errors()
+    )
+
+    base_h = {
+        "schema_version": SUPPORTED_INCIDENT_SCHEMA_VERSION,
+        "handoff_id": derive_handoff_id(
+            incident_id=agg.incident_id,
+            incident_revision=agg.revision,
+            incident_revision_fingerprint=agg.revision_fingerprint,
+        ),
+        "incident_id": agg.incident_id,
+        "incident_revision": agg.revision,
+        "incident_revision_fingerprint": agg.revision_fingerprint,
+        "tenant_id": agg.tenant_id,
+        "environment": agg.environment,
+        "status": IncidentStatus.OPEN,
+        "severity": EventSeverity.ERROR,
+        "severity_policy_version": bad_policy,
+        "primary_service": agg.primary_service,
+        "affected_services": list(agg.affected_services),
+        "signal_references": list(agg.signal_references),
+        "generated_at": _UTC_NOW,
+    }
+    with pytest.raises(ValidationError) as exc_info_h:
+        IncidentHandoff.model_validate(base_h)
+    assert any(
+        "severity_policy_version" in str(err.get("loc", ()))
+        for err in exc_info_h.value.errors()
+    )
+
+
+def test_aggregate_serialization_preserves_severity_policy_version() -> None:
+    agg = _make_aggregate()
+    raw = serialize_incident_aggregate(agg)
+    deserialized = deserialize_incident_aggregate(raw)
+    assert deserialized.severity_policy_version == "max-member-severity/v1"
+    assert deserialized == agg
+
+
+def test_handoff_serialization_preserves_severity_policy_version() -> None:
+    agg = _make_aggregate()
+    base_h = {
+        "schema_version": SUPPORTED_INCIDENT_SCHEMA_VERSION,
+        "handoff_id": derive_handoff_id(
+            incident_id=agg.incident_id,
+            incident_revision=agg.revision,
+            incident_revision_fingerprint=agg.revision_fingerprint,
+        ),
+        "incident_id": agg.incident_id,
+        "incident_revision": agg.revision,
+        "incident_revision_fingerprint": agg.revision_fingerprint,
+        "tenant_id": agg.tenant_id,
+        "environment": agg.environment,
+        "status": IncidentStatus.OPEN,
+        "severity": EventSeverity.ERROR,
+        "severity_policy_version": "max-member-severity/v1",
+        "primary_service": agg.primary_service,
+        "affected_services": list(agg.affected_services),
+        "signal_references": list(agg.signal_references),
+        "generated_at": _UTC_NOW,
+    }
+    handoff = IncidentHandoff.model_validate(base_h)
+    raw = serialize_incident_handoff(handoff)
+    deserialized = deserialize_incident_handoff(raw)
+    assert deserialized.severity_policy_version == "max-member-severity/v1"
+    assert deserialized == handoff
+
+
+def test_aggregate_semantic_projection_contains_severity_policy_version() -> None:
+    agg = _make_aggregate()
+    proj = aggregate_semantic_projection(agg)
+    assert "severity_policy_version" in proj
+    assert proj["severity_policy_version"] == "max-member-severity/v1"
+
+
+def test_correlation_state_changed_timeline_event_type_value() -> None:
+    assert (
+        IncidentTimelineEventType.CORRELATION_STATE_CHANGED.value
+        == "correlation_state_changed"
+    )
+    assert (
+        IncidentTimelineEventType("correlation_state_changed")
+        is IncidentTimelineEventType.CORRELATION_STATE_CHANGED
+    )
+
+
+def test_correlation_state_changed_timeline_event_round_trip() -> None:
+    from app.correlation.serialization import (
+        deserialize_incident_timeline_event,
+        serialize_incident_timeline_event,
+    )
+
+    inc_id = uuid.UUID("11111111-2222-3333-4444-555555555555")
+    fixed_time = datetime(2026, 11, 1, 12, 0, 0, tzinfo=timezone.utc)
+    ev_id = derive_timeline_event_id(
+        incident_id=inc_id,
+        revision=2,
+        event_type=IncidentTimelineEventType.CORRELATION_STATE_CHANGED,
+        event_time=fixed_time,
+        source_signal_id=None,
+        revision_fingerprint=_FP,
+    )
+    ev = IncidentTimelineEvent(
+        schema_version="1.2",
+        event_id=ev_id,
+        incident_id=inc_id,
+        revision=2,
+        event_time=fixed_time,
+        event_type=IncidentTimelineEventType.CORRELATION_STATE_CHANGED,
+        source_signal_id=None,
+        summary="window settling",
+        revision_fingerprint=_FP,
+    )
+    raw = serialize_incident_timeline_event(ev)
+    deserialized = deserialize_incident_timeline_event(raw)
+    assert deserialized == ev
+    assert serialize_incident_timeline_event(deserialized) == raw
+
+
+def test_correlation_finalized_remains_valid_and_distinct() -> None:
+    assert (
+        IncidentTimelineEventType.CORRELATION_FINALIZED.value == "correlation_finalized"
+    )
+    assert (
+        IncidentTimelineEventType.CORRELATION_FINALIZED
+        != IncidentTimelineEventType.CORRELATION_STATE_CHANGED
+    )
+
+
+def test_models_with_severity_policy_remain_frozen() -> None:
+    agg = _make_aggregate()
+    with pytest.raises(ValidationError):
+        agg.severity_policy_version = "other/v1"  # type: ignore[misc]
+
+    base_h = {
+        "schema_version": SUPPORTED_INCIDENT_SCHEMA_VERSION,
+        "handoff_id": derive_handoff_id(
+            incident_id=agg.incident_id,
+            incident_revision=agg.revision,
+            incident_revision_fingerprint=agg.revision_fingerprint,
+        ),
+        "incident_id": agg.incident_id,
+        "incident_revision": agg.revision,
+        "incident_revision_fingerprint": agg.revision_fingerprint,
+        "tenant_id": agg.tenant_id,
+        "environment": agg.environment,
+        "status": IncidentStatus.OPEN,
+        "severity": EventSeverity.ERROR,
+        "severity_policy_version": "max-member-severity/v1",
+        "primary_service": agg.primary_service,
+        "affected_services": list(agg.affected_services),
+        "signal_references": list(agg.signal_references),
+        "generated_at": _UTC_NOW,
+    }
+    handoff = IncidentHandoff.model_validate(base_h)
+    with pytest.raises(ValidationError):
+        handoff.severity_policy_version = "other/v1"  # type: ignore[misc]

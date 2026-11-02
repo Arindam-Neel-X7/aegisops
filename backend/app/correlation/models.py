@@ -19,7 +19,8 @@ from pydantic import (
 
 from app.telemetry.schemas import EventSeverity
 
-SUPPORTED_INCIDENT_SCHEMA_VERSION = "1.0"
+SUPPORTED_INCIDENT_SCHEMA_VERSION = "1.2"
+SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION = "max-member-severity/v1"
 
 MAX_UINT64 = 18446744073709551615
 MAX_ENV_SERVICE_LEN = 128
@@ -186,6 +187,7 @@ class IncidentTimelineEventType(StrEnum):
     SIGNAL_ATTACHED = "signal_attached"
     SEVERITY_CHANGED = "severity_changed"
     TOPOLOGY_ENRICHED = "topology_enriched"
+    CORRELATION_STATE_CHANGED = "correlation_state_changed"
     CORRELATION_FINALIZED = "correlation_finalized"
 
 
@@ -197,6 +199,12 @@ class IncidentSignalReference(_FrozenStrictBase):
     service: str
     event_time: AwareDatetime
     severity: EventSeverity
+    anomaly_score: float = Field(ge=0.0, le=1.0)
+
+    @field_validator("anomaly_score", mode="before")
+    @classmethod
+    def _check_anomaly_score(cls, value: Any) -> Any:
+        return _validate_score(value)
 
     @field_validator("semantic_fingerprint", mode="after")
     @classmethod
@@ -391,6 +399,7 @@ class IncidentAggregate(_FrozenStrictBase):
     status: IncidentStatus
     correlation_state: CorrelationWindowState
     severity: EventSeverity
+    severity_policy_version: str
     started_at: AwareDatetime
     last_seen_at: AwareDatetime
     created_at: AwareDatetime
@@ -409,6 +418,13 @@ class IncidentAggregate(_FrozenStrictBase):
     def _check_schema(cls, v: str) -> str:
         if v != SUPPORTED_INCIDENT_SCHEMA_VERSION:
             raise ValueError("unsupported schema_version")
+        return v
+
+    @field_validator("severity_policy_version", mode="after")
+    @classmethod
+    def _check_severity_policy(cls, v: str) -> str:
+        if v != SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION:
+            raise ValueError("unsupported severity_policy_version")
         return v
 
     @field_validator("incident_number", mode="after")
@@ -551,6 +567,7 @@ class IncidentHandoff(_FrozenStrictBase):
     environment: str
     status: IncidentStatus
     severity: EventSeverity
+    severity_policy_version: str
     primary_service: str
     affected_services: tuple[str, ...]
     signal_references: tuple[IncidentSignalReference, ...]
@@ -563,6 +580,13 @@ class IncidentHandoff(_FrozenStrictBase):
     def _check_schema(cls, v: str) -> str:
         if v != SUPPORTED_INCIDENT_SCHEMA_VERSION:
             raise ValueError("unsupported schema_version")
+        return v
+
+    @field_validator("severity_policy_version", mode="after")
+    @classmethod
+    def _check_severity_policy(cls, v: str) -> str:
+        if v != SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION:
+            raise ValueError("unsupported severity_policy_version")
         return v
 
     @field_validator("incident_revision", mode="before")
@@ -639,6 +663,7 @@ def aggregate_semantic_projection(aggregate: IncidentAggregate) -> dict[str, Any
         "status": aggregate.status.value,
         "correlation_state": aggregate.correlation_state.value,
         "severity": aggregate.severity.value,
+        "severity_policy_version": aggregate.severity_policy_version,
         "started_at": aggregate.started_at.isoformat(),
         "last_seen_at": aggregate.last_seen_at.isoformat(),
         "created_at": aggregate.created_at.isoformat(),

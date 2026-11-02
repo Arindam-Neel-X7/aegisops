@@ -11,13 +11,20 @@ from app.correlation.consumer import (
     DedupeReservationOutcome,
     InMemoryAnomalyDedupeStore,
 )
+from app.correlation.aggregate import (
+    IncidentAggregationResult,
+    create_or_update_incident,
+)
 from app.correlation.errors import (
+    AggregateInputError,
+    AggregateStateError,
     AnomalyDedupeCapacityError,
     AnomalyDedupeStoreError,
     AnomalyEvidenceLimitError,
     AnomalyIdentityConflictError,
     CorrelationConfigurationError,
     CorrelationError,
+    CorrelationAggregateError,
     CorrelationGroupingError,
     GroupingCapacityError,
     GroupingContractError,
@@ -106,6 +113,7 @@ from app.correlation.models import (
     MIN_HOPS,
     MIN_REVISION,
     SUPPORTED_INCIDENT_SCHEMA_VERSION,
+    SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION,
     BlastRadiusSummary,
     CorrelationEvidence,
     CorrelationWindowState,
@@ -161,6 +169,7 @@ from app.correlation.topology_neo4j import Neo4jTopologyProvider
 __all__ = [
     "score_candidate_pair",
     "SUPPORTED_INCIDENT_SCHEMA_VERSION",
+    "SUPPORTED_INCIDENT_SEVERITY_POLICY_VERSION",
     "MAX_UINT64",
     "MAX_ENV_SERVICE_LEN",
     "MAX_PROVIDER_LEN",
@@ -188,6 +197,11 @@ __all__ = [
     "BlastRadiusSummary",
     "IncidentTimelineEvent",
     "IncidentAggregate",
+    "IncidentAggregationResult",
+    "create_or_update_incident",
+    "CorrelationAggregateError",
+    "AggregateInputError",
+    "AggregateStateError",
     "IncidentHandoff",
     "aggregate_semantic_projection",
     "INCIDENT_NAMESPACE",

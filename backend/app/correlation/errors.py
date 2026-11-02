@@ -83,3 +83,16 @@ class GroupingInputError(CorrelationGroupingError):
 
 class GroupingCapacityError(CorrelationGroupingError):
     """Raised when grouping input or output capacity limits are exceeded."""
+
+
+# Task 4.8 Incident Aggregation Errors
+class CorrelationAggregateError(CorrelationError):
+    """Base exception for incident aggregation service errors."""
+
+
+class AggregateInputError(CorrelationAggregateError):
+    """Raised when aggregation inputs violate service preconditions."""
+
+
+class AggregateStateError(CorrelationAggregateError):
+    """Raised when an aggregate update violates state invariants."""
