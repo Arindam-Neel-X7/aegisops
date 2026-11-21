@@ -96,3 +96,28 @@ class AggregateInputError(CorrelationAggregateError):
 
 class AggregateStateError(CorrelationAggregateError):
     """Raised when an aggregate update violates state invariants."""
+
+
+# Task 4.9 Incident Persistence Errors
+class IncidentPersistenceError(CorrelationError):
+    """Base exception for incident persistence errors."""
+
+
+class IncidentPersistenceInputError(IncidentPersistenceError):
+    """Raised when repository input parameters or payloads violate preconditions."""
+
+
+class IncidentPersistenceTenantError(IncidentPersistenceError):
+    """Raised when tenant context is missing, invalid, or mismatched."""
+
+
+class IncidentPersistenceConflictError(IncidentPersistenceError):
+    """Raised on concurrency or unique constraint conflicts (e.g. 23505)."""
+
+
+class IncidentPersistenceCorruptionError(IncidentPersistenceError):
+    """Raised when persisted data violates canonical reconstruction or invariants."""
+
+
+class IncidentPersistenceStoreError(IncidentPersistenceError):
+    """Raised on underlying database or transaction store errors."""

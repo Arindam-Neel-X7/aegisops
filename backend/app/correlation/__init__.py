@@ -40,6 +40,12 @@ from app.correlation.errors import (
     TopologyQueryLimitError,
     TopologyVersionMismatchError,
     AnomalyIntakeError,
+    IncidentPersistenceError,
+    IncidentPersistenceInputError,
+    IncidentPersistenceTenantError,
+    IncidentPersistenceConflictError,
+    IncidentPersistenceCorruptionError,
+    IncidentPersistenceStoreError,
 )
 
 from app.correlation.grouping import (
@@ -165,6 +171,14 @@ from app.correlation.topology import (
 from app.correlation.scoring import score_candidate_pair
 from app.correlation.topology_canonical import CanonicalTopologyProvider
 from app.correlation.topology_neo4j import Neo4jTopologyProvider
+from app.correlation.persistence_service import persist_incident_atomic
+from app.correlation.persistence_repository import (
+    IncidentPersistenceRepository,
+    SqlAlchemyIncidentPersistenceRepository,
+    PersistedIncidentState,
+    PersistedPublicationIntent,
+    IncidentVersion,
+)
 
 __all__ = [
     "score_candidate_pair",
@@ -314,4 +328,16 @@ __all__ = [
     "deserialize_grouping_result",
     "compute_group_fingerprint",
     "compute_result_fingerprint",
+    "persist_incident_atomic",
+    "IncidentPersistenceRepository",
+    "SqlAlchemyIncidentPersistenceRepository",
+    "PersistedIncidentState",
+    "PersistedPublicationIntent",
+    "IncidentVersion",
+    "IncidentPersistenceError",
+    "IncidentPersistenceInputError",
+    "IncidentPersistenceTenantError",
+    "IncidentPersistenceConflictError",
+    "IncidentPersistenceCorruptionError",
+    "IncidentPersistenceStoreError",
 ]
