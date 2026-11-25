@@ -638,7 +638,7 @@ def native_identity(path: Path) -> dict:
             "%Y-%m-%dT%H:%M:%S"
         )
         + f".{ns//100:07d}Z",
-        read_only=bool(stat.st_file_attributes & 1)
+        read_only=bool(getattr(stat, "st_file_attributes", 0) & 1)
         if os.name == "nt"
         else not bool(stat.st_mode & 0o222),
     )
