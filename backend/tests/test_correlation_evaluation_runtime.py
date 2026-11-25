@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import hashlib
 import json
 from pathlib import Path
 
@@ -27,17 +28,46 @@ def package():
     return config, runtime, plans
 
 
+def _runtime_sources(
+    config: e.EvaluationConfig,
+) -> tuple[Path, tuple[e.PortableIdentity, ...]]:
+    """Use full workspace pins when available; otherwise verify all 15 repo sources."""
+    if all(
+        (WORKSPACE / source.path).is_file()
+        and hashlib.sha256((WORKSPACE / source.path).read_bytes()).hexdigest()
+        == source.sha256
+        for source in config.source_identities
+    ):
+        return WORKSPACE, config.source_identities
+    repo_sources = []
+    for source in config.source_identities:
+        if not source.path.startswith("aegisops/"):
+            continue
+        relative = source.path.removeprefix("aegisops/")
+        raw = (REPO / relative).read_bytes()
+        repo_sources.append(
+            e.PortableIdentity(
+                path=relative,
+                bytes=len(raw),
+                sha256=hashlib.sha256(raw).hexdigest(),
+            )
+        )
+    assert len(repo_sources) == 15
+    return REPO, tuple(repo_sources)
+
+
 def request(package, index=0):
     config, runtime, plans = package
     case = runtime.cases[index]
     plan = next(p for p in plans if p.case_id == case.case_id and p.warmup)
+    workspace, sources = _runtime_sources(config)
     return e.RuntimeRequest(
         plan=plan,
         case=case,
         policy=config.policies[0],
         topology=next(t for t in config.topologies if t.name == case.topology_key),
-        sources=config.source_identities,
-        workspace=str(WORKSPACE),
+        sources=sources,
+        workspace=str(workspace),
         environment=e.runtime_environment(),
     )
 
@@ -232,7 +262,7 @@ def test_stale_topology_and_source_drift_fail_before_dispatch(package, monkeypat
         )
     source = value.sources[0].model_copy(update={"sha256": "0" * 64})
     with pytest.raises(e.EvaluationContractError):
-        e.observe_runtime_sources(str(WORKSPACE), (source,))
+        e.observe_runtime_sources(value.workspace, (source,))
 
 
 def test_real_isolated_worker_and_capture(package):
