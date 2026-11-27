@@ -3306,7 +3306,7 @@ async def test_upgrade_downgrade_upgrade_is_reversible(
 ) -> None:
     """The shared fixture measures both revisions and reconciles the full restored catalog."""
     assert t1_migration_roundtrip["down_revision"] == "20260918_0001"
-    assert t1_migration_roundtrip["up_revision"] == "20261103_0002"
+    assert t1_migration_roundtrip["up_revision"] == "20261127_0003"
     assert (
         t1_migration_roundtrip["catalog_before"]
         == t1_migration_roundtrip["catalog_after"]
@@ -6407,7 +6407,7 @@ async def t1_migration_roundtrip(db_resource: dict[str, Any]) -> dict[str, Any]:
         up_revision = await connection.fetchval(
             "SELECT version_num FROM alembic_version"
         )
-        assert up_revision == "20261103_0002"
+        assert up_revision == "20261127_0003"
         await test_upgrade_creates_exact_incident_catalog(db_resource, connection)
         catalog_after = await _t1_schema_state(connection, list(_T1_KEYS), functions)
         assert catalog_after == catalog_before

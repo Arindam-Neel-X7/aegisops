@@ -1,6 +1,7 @@
 from .base import Base
 from .incident import (
     IncidentCorrelationEvidenceRecord,
+    IncidentPublicationDispatchRecord,
     IncidentPublicationIntentRecord,
     IncidentRecord,
     IncidentSignalLinkRecord,
@@ -15,6 +16,7 @@ from .user import User
 __all__ = [
     "Base",
     "IncidentCorrelationEvidenceRecord",
+    "IncidentPublicationDispatchRecord",
     "IncidentPublicationIntentRecord",
     "IncidentRecord",
     "IncidentSignalLinkRecord",

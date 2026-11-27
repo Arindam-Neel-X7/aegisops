@@ -6,13 +6,28 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 
 
-def test_incident_persistence_migration_is_the_single_alembic_head() -> None:
+def test_incident_publication_dispatch_migration_is_the_single_alembic_head() -> None:
     backend_root = Path(__file__).resolve().parents[1]
     config = Config(str(backend_root / "alembic.ini"))
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20261103_0002"]
+    assert scripts.get_heads() == ["20261127_0003"]
     assert len(scripts.get_heads()) == 1
+
+
+def test_incident_publication_dispatch_migration_chains_from_incident_persistence() -> (
+    None
+):
+    backend_root = Path(__file__).resolve().parents[1]
+    config = Config(str(backend_root / "alembic.ini"))
+    scripts = ScriptDirectory.from_config(config)
+
+    revision = scripts.get_revision("20261127_0003")
+    assert revision is not None
+    assert revision.down_revision == "20261103_0002"
+    assert revision.dependencies is None or len(revision.dependencies) == 0
+    assert callable(revision.module.upgrade)
+    assert callable(revision.module.downgrade)
 
 
 def test_incident_persistence_migration_has_foundation_down_revision() -> None:
